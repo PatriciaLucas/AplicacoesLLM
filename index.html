@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aplicações de Modelos de Linguagem Natural</title>
+<style>
+  :root {
+    --texto: #1f2328;
+    --texto-suave: #4b5157;
+    --linha: #e3e5e8;
+    --acento: #2f5fa3;
+    --fundo-code: #f5f6f8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: var(--texto);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ---------- Cabeçalho fixo com menu sanduíche ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--linha);
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    z-index: 100;
+  }
+
+  .menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .menu-btn span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background-color: var(--texto);
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .menu-btn.aberto span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.aberto span:nth-child(2) { opacity: 0; }
+  .menu-btn.aberto span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  header .titulo-curto {
+    margin-left: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--texto-suave);
+    font-weight: 600;
+  }
+
+  /* ---------- Painel de navegação (escondido por padrão) ---------- */
+  nav#menu-secoes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    max-width: 80vw;
+    background-color: #ffffff;
+    border-right: 1px solid var(--linha);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+    padding: 4.5rem 1.5rem 1.5rem 1.5rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 99;
+    overflow-y: auto;
+  }
+
+  nav#menu-secoes.aberto {
+    transform: translateX(0);
+  }
+
+  nav#menu-secoes h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--texto-suave);
+    margin: 0 0 1rem 0;
+  }
+
+  nav#menu-secoes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav#menu-secoes li {
+    margin-bottom: 0.35rem;
+  }
+
+  nav#menu-secoes a {
+    display: block;
+    padding: 0.5rem 0.6rem;
+    color: var(--texto);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  nav#menu-secoes a:hover {
+    background-color: var(--fundo-code);
+    color: var(--acento);
+  }
+
+  /* fundo escurecido quando o menu está aberto */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 98;
+  }
+
+  #overlay.aberto {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ---------- Conteúdo ---------- */
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem 1.5rem;
+  }
+
+  main h1 {
+    font-size: 1.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitulo {
+    color: var(--texto-suave);
+    margin-top: 0;
+    margin-bottom: 2.5rem;
+    font-size: 1rem;
+  }
+
+  section {
+    margin-bottom: 3rem;
+    scroll-margin-top: 5rem;
+  }
+
+  section h2 {
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--linha);
+    padding-bottom: 0.4rem;
+    margin-bottom: 1.1rem;
+    color: var(--texto);
+  }
+
+  p { margin: 0 0 1rem 0; }
+
+  strong { color: var(--texto); }
+
+  /* ---------- Cronograma ---------- */
+  .cronograma {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cronograma li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+  }
+
+  .cronograma .numero {
+    flex: 0 0 auto;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    background-color: var(--fundo-code);
+    color: var(--acento);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+  }
+
+  .cronograma .conteudo {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .cronograma .tema {
+    font-weight: 600;
+    color: var(--texto);
+  }
+
+  .cronograma .tema.pendente {
+    font-weight: 400;
+    color: var(--texto-suave);
+    font-style: italic;
+  }
+
+  .cronograma a.acessar {
+    flex: 0 0 auto;
+    color: var(--acento);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid var(--acento);
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    white-space: nowrap;
+  }
+
+  .cronograma a.acessar:hover {
+    background-color: var(--acento);
+    color: #ffffff;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--texto-suave);
+    font-size: 0.85rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--linha);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" id="botao-menu" aria-label="Abrir menu de seções" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="titulo-curto">Aplicações de Modelos de Linguagem Natural</span>
+</header>
+
+<div id="overlay"></div>
+
+<nav id="menu-secoes" aria-label="Navegação por seções">
+  <h2>Seções</h2>
+  <ul>
+    <li><a href="#ementa">Ementa</a></li>
+    <li><a href="#cronograma">Cronograma</a></li>
+  </ul>
+</nav>
+
+<main>
+  <h1>Aplicações de Modelos de Linguagem Natural</h1>
+  <p class="subtitulo">Página inicial da disciplina</p>
+
+  <section id="ementa">
+    <h2>Ementa</h2>
+    <p>Engenharia de Prompt. Tipos e componentes de um prompt. Geração Aumentada por Recuperação (RAG): Bancos de Dados Vetoriais, Embeddings, Construção de Prompts. Agentes Inteligentes e Interação com ferramentas.</p>
+  </section>
+
+  <section id="cronograma">
+    <h2>Cronograma</h2>
+    <ul class="cronograma">
+      <li>
+        <span class="numero">1</span>
+        <span class="conteudo"><span class="tema">Introdução à engenharia de prompts</span></span>
+        <a class="acessar" href="unidade1_engenharia_prompt.html">Acessar</a>
+      </li>
+      <li>
+        <span class="numero">2</span>
+        <span class="conteudo"><span class="tema">Técnicas de prompts</span></span>
+        <a class="acessar" href="unidade2_tecnicas_prompt.html">Acessar</a>
+      </li>
+      <li>
+        <span class="numero">3</span>
+        <span class="conteudo"><span class="tema">Ataques de injeção de prompts</span></span>
+        <a class="acessar" href="#">Acessar</a>
+      </li>
+      <li>
+        <span class="numero">4</span>
+        <span class="conteudo"><span class="tema">Fundamentos de RAG</span></span>
+        <a class="acessar" href="#">Acessar</a>
+      </li>
+      <li>
+        <span class="numero">5</span>
+        <span class="conteudo"><span class="tema">Implementação RAG</span></span>
+        <a class="acessar" href="#">Acessar</a>
+      </li>
+      <li>
+        <span class="numero">6</span>
+        <span class="conteudo"><span class="tema">Agentes LLM</span></span>
+        <a class="acessar" href="#">Acessar</a>
+      </li>
+      <li>
+        <span class="numero">7</span>
+        <span class="conteudo"><span class="tema">Agentes LLM com ferramentas</span></span>
+        <a class="acessar" href="#">Acessar</a>
+      </li>
+      <li>
+        <span class="numero">8</span>
+        <span class="conteudo"><span class="tema pendente">Tema a definir</span></span>
+        <a class="acessar" href="#">Acessar</a>
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p style="margin-bottom: 5px; font-size: 12px;">
+    Material didático produzido para a disciplina Aplicações de Modelos de Linguagem Natural.
+  </p>
+</footer>
+
+<script>
+  (function () {
+    var botao = document.getElementById('botao-menu');
+    var menu = document.getElementById('menu-secoes');
+    var overlay = document.getElementById('overlay');
+
+    function abrirMenu() {
+      menu.classList.add('aberto');
+      overlay.classList.add('aberto');
+      botao.classList.add('aberto');
+      botao.setAttribute('aria-expanded', 'true');
+    }
+
+    function fecharMenu() {
+      menu.classList.remove('aberto');
+      overlay.classList.remove('aberto');
+      botao.classList.remove('aberto');
+      botao.setAttribute('aria-expanded', 'false');
+    }
+
+    botao.addEventListener('click', function () {
+      if (menu.classList.contains('aberto')) {
+        fecharMenu();
+      } else {
+        abrirMenu();
+      }
+    });
+
+    overlay.addEventListener('click', fecharMenu);
+
+    var linksMenu = menu.querySelectorAll('a');
+    for (var i = 0; i < linksMenu.length; i++) {
+      linksMenu[i].addEventListener('click', fecharMenu);
+    }
+
+    document.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape') {
+        fecharMenu();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
