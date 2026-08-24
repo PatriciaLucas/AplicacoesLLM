@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unidade 1 — Engenharia de Prompt</title>
+<style>
+  :root {
+    --texto: #1f2328;
+    --texto-suave: #4b5157;
+    --linha: #e3e5e8;
+    --acento: #2f5fa3;
+    --fundo-code: #f5f6f8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: var(--texto);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ---------- Cabeçalho fixo com menu sanduíche ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--linha);
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    z-index: 100;
+  }
+
+  .menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .menu-btn span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background-color: var(--texto);
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .menu-btn.aberto span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.aberto span:nth-child(2) { opacity: 0; }
+  .menu-btn.aberto span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  header .titulo-curto {
+    margin-left: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--texto-suave);
+    font-weight: 600;
+  }
+
+  /* ---------- Painel de navegação (escondido por padrão) ---------- */
+  nav#menu-secoes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    max-width: 80vw;
+    background-color: #ffffff;
+    border-right: 1px solid var(--linha);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+    padding: 4.5rem 1.5rem 1.5rem 1.5rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 99;
+    overflow-y: auto;
+  }
+
+  nav#menu-secoes.aberto {
+    transform: translateX(0);
+  }
+
+  nav#menu-secoes h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--texto-suave);
+    margin: 0 0 1rem 0;
+  }
+
+  nav#menu-secoes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav#menu-secoes li {
+    margin-bottom: 0.35rem;
+  }
+
+  nav#menu-secoes a {
+    display: block;
+    padding: 0.5rem 0.6rem;
+    color: var(--texto);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  nav#menu-secoes a:hover {
+    background-color: var(--fundo-code);
+    color: var(--acento);
+  }
+
+  nav#menu-secoes ul ul {
+    margin-left: 0.9rem;
+    margin-top: 0.25rem;
+  }
+
+  nav#menu-secoes ul ul a {
+    font-size: 0.88rem;
+    color: var(--texto-suave);
+  }
+
+  /* fundo escurecido quando o menu está aberto */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 98;
+  }
+
+  #overlay.aberto {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ---------- Conteúdo ---------- */
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem 1.5rem;
+  }
+
+  main h1 {
+    font-size: 1.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitulo {
+    color: var(--texto-suave);
+    margin-top: 0;
+    margin-bottom: 2.5rem;
+    font-size: 1rem;
+  }
+
+  section {
+    margin-bottom: 3rem;
+    scroll-margin-top: 5rem;
+  }
+
+  section h2 {
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--linha);
+    padding-bottom: 0.4rem;
+    margin-bottom: 1.1rem;
+    color: var(--texto);
+  }
+
+  section h3 {
+    font-size: 1.15rem;
+    margin-top: 1.8rem;
+    margin-bottom: 0.7rem;
+    color: var(--texto);
+  }
+
+  section h4 {
+    font-size: 1.02rem;
+    margin-top: 1.4rem;
+    margin-bottom: 0.5rem;
+    color: var(--acento);
+  }
+
+  p { margin: 0 0 1rem 0; }
+
+  .exemplo {
+    background-color: var(--fundo-code);
+    border-left: 3px solid var(--acento);
+    border-radius: 4px;
+    padding: 0.8rem 1rem;
+    margin: 0.8rem 0 1.2rem 0;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.92rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
+  .legenda-exemplo {
+    font-size: 0.85rem;
+    color: var(--texto-suave);
+    margin-top: -0.9rem;
+    margin-bottom: 1.2rem;
+    font-style: italic;
+  }
+
+  .figura-central {
+    margin: 1.5rem auto;
+    text-align: center;
+  }
+
+  .figura-central img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  .figura-central figcaption {
+    margin-top: 0.5rem;
+  }
+
+  .figuras-lado-a-lado {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .figuras-lado-a-lado figure {
+    flex: 1 1 200px;
+    max-width: 31%;
+    margin: 0;
+    text-align: center;
+  }
+
+  .figuras-lado-a-lado img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  .figuras-lado-a-lado figcaption {
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .figuras-lado-a-lado figure {
+      max-width: 100%;
+    }
+  }
+
+  blockquote {
+    margin: 0 0 1rem 0;
+    padding: 0.6rem 1rem;
+    border-left: 3px solid #c9cdd2;
+    color: var(--texto-suave);
+    font-style: italic;
+  }
+
+  strong { color: var(--texto); }
+
+  #referencias ul {
+    padding-left: 1.2rem;
+  }
+
+  #referencias li {
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--texto-suave);
+    font-size: 0.85rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--linha);
+  }
+
+  code {
+    background-color: var(--fundo-code);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" id="botao-menu" aria-label="Abrir menu de seções" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="titulo-curto">Unidade 1 — Engenharia de Prompt</span>
+</header>
+
+<div id="overlay"></div>
+
+<nav id="menu-secoes" aria-label="Navegação por seções">
+  <h2>Seções</h2>
+  <ul>
+    <li><a href="#introducao">1. Introdução à Engenharia de Prompt</a></li>
+    <li><a href="#conceito-prompt">2. Conceito de Prompt</a></li>
+    <li><a href="#modelo-prompt">3. Modelo de Prompt (Prompt Template)</a></li>
+    <li>
+      <a href="#terminologia">4. Terminologia</a>
+      <ul>
+        <li><a href="#componentes-prompt">4.1 Componentes de um Prompt</a></li>
+        <li><a href="#termos-instrucao">4.2 Termos de Instrução</a></li>
+      </ul>
+    </li>
+    <li><a href="#motivacao">5. Por que a Engenharia de Prompt é importante</a></li>
+    <li><a href="#configuracao-saida">6. Configuração da Saída do LLM</a></li>
+    <li><a href="#referencias">7. Referências</a></li>
+  </ul>
+</nav>
+
+<main>
+  <h1>Unidade 1 — Engenharia de Prompt</h1>
+  <p class="subtitulo">Disciplina: Aplicações de Modelos de Linguagem Natural</p>
+
+<section id="introducao">
+    <h2>1. Introdução à Engenharia de Prompt</h2>
+
+    <p>Os grandes modelos de linguagem (LLMs) são amplamente utilizados hoje em aplicações voltadas para consumidores, em sistemas internos de empresas e em contextos de pesquisa. Em geral, esses modelos funcionam a partir de uma entrada fornecida pelo usuário — chamada de <strong>prompt</strong> — a partir da qual o modelo gera uma saída como resposta. Um prompt pode ser textual, como em <code>"Escreva um poema sobre árvores."</code>, ou assumir outras formas, como imagens, áudio, vídeo, ou uma combinação desses formatos. Por permitir o uso de linguagem natural, o prompting torna esses modelos fáceis de usar e flexíveis o suficiente para se adaptar a uma ampla variedade de aplicações.</p>
+
+    <p>Para usar LLMs de forma efetiva, é fundamental saber como estruturar, avaliar e executar tarefas por meio de prompts. Na prática, prompts bem construídos tendem a gerar resultados melhores em diferentes tipos de tarefa. Por esse motivo, cresceu significativamente a quantidade de estudos sobre como usar o <em>prompting</em> para melhorar esses resultados, e o número de técnicas de prompting disponíveis vem aumentando rapidamente.</p>
+
+    <p>Apesar desse crescimento, a engenharia de prompt ainda é um campo relativamente novo, e seu uso costuma ser pouco compreendido: grande parte da terminologia e das técnicas existentes ainda não é amplamente conhecida entre os praticantes. Por isso, é importante que quem trabalha com IA Generativa domine, desde o início, os conceitos e o vocabulário fundamentais da área — conteúdo que será apresentado ao longo desta unidade.</p>
+
+  </section>
+
+  <section id="conceito-prompt">
+    <h2>2. Conceito de Prompt</h2>
+
+    <p>Um <strong>prompt</strong> é definido como "uma entrada para um modelo de IA Generativa, que é usada para guiar sua saída". Os prompts podem consistir em texto, imagem, som ou outros tipos de mídia. Alguns exemplos de prompts incluem:</p>
+
+    <div class="exemplo">escreva um e-mail de três parágrafos para uma campanha de marketing de uma empresa de contabilidade</div>
+    <p class="legenda-exemplo">Exemplo de prompt textual.</p>
+
+    <p>uma fotografia de uma mesa acompanhada da instrução:</p>
+    <div class="exemplo">descreva tudo o que está na mesa</div>
+    <figure><img src="exemplo_prompt_multimodal.png" alt="" style="width: 400px; height: auto;"><figcaption><p class="legenda-exemplo">Exemplo de prompt multimodal (imagem + texto).</p></figcaption></figure>
+
+    <p>ou, ainda, uma gravação de uma reunião on-line acompanhada da instrução:</p>
+    <div class="exemplo">descreva tudo que está no áudio</div>
+
+    <figure><img src="exemplo_prompt_audio.png" alt="" style="width: 400px; height: auto;"><figcaption><p class="legenda-exemplo">Exemplo de prompt multimodal (áudio + texto).</p></figcaption></figure>
+
+    <p>Esses exemplos ilustram que o conceito de prompt não está restrito a texto: qualquer entrada — textual ou multimodal — que seja fornecida a um modelo de IA Generativa com o objetivo de guiar a sua saída pode ser considerada um prompt.</p>
+  </section>
+
+  <section id="modelo-prompt">
+    <h2>3. Modelo de Prompt (Prompt Template)</h2>
+
+    <p>Prompts são frequentemente construídos por meio de um <strong>prompt template</strong> (modelo de prompt). Um prompt template é uma função que contém uma ou mais variáveis que serão substituídas por alguma mídia — geralmente texto — para criar um prompt concreto. O prompt resultante da substituição dessas variáveis pode então ser considerado uma <strong>instância</strong> do template.</p>
+
+    <p>Considere a aplicação de prompting à tarefa de classificação binária de tweets:</p>
+
+    <div class="exemplo">Classifique o tweet como positivo ou negativo: {TWEET}</div>
+    <p class="legenda-exemplo">Prompt template para classificação de sentimento de tweets.</p>
+
+    <p>Cada tweet do conjunto de dados seria inserido em uma instância separada do template, e o prompt resultante seria passado para um LLM para inferência. Ou seja, a variável <code>{TWEET}</code> é substituída pelo texto de um tweet específico a cada execução, gerando um novo prompt concreto a partir do mesmo template.</p>
+
+    <p>Outro exemplo de prompt template:</p>
+
+    <div class="exemplo">Escreva um poema sobre o seguinte tema: {ENTRADA_DO_USUARIO}</div>
+    <p class="legenda-exemplo">Prompt template para geração de poemas a partir de um tema fornecido pelo usuário.</p>
+
+    <p>O uso de templates é o que torna os prompts reutilizáveis e programáveis: em vez de escrever manualmente um novo prompt para cada entrada, o template define a estrutura fixa da tarefa, deixando apenas os pontos variáveis — como <code>{TWEET}</code> ou <code>{ENTRADA_DO_USUARIO}</code> — para serem preenchidos dinamicamente.</p>
+  </section>
+
+  <section id="terminologia">
+    <h2>4. Terminologia</h2>
+    <p>A terminologia de prompting está se desenvolvendo rapidamente, e há muitas definições mal compreendidas e até conflitantes entre si. Esta seção apresenta um vocabulário de termos usados na comunidade de prompting, dividido em duas partes: os <strong>componentes</strong> que costumam formar um prompt e os <strong>termos de instrução</strong> — o vocabulário conceitual usado para descrever o próprio processo de prompting.</p>
+
+    <section id="componentes-prompt">
+      <h3>4.1 Componentes de um Prompt</h3>
+      <p>Há uma variedade de componentes comumente incluídos em um prompt. A seguir, resumem-se os componentes mais utilizados e discute-se como cada um se encaixa na construção de prompts.</p>
+
+      <h4>Diretiva</h4>
+      <p>Muitos prompts emitem uma diretiva na forma de uma instrução ou pergunta. Esta é a intenção central do prompt. Por exemplo:</p>
+      <div class="exemplo">Me diga cinco bons livros para ler.</div>
+      <p class="legenda-exemplo">Diretiva explícita, formulada como instrução direta.</p>
+      <p>Diretivas também podem ser implícitas, como neste caso <em>one-shot</em>, em que a diretiva é executar uma tradução do português para o espanhol, sem que isso seja dito explicitamente:</p>
+      <div class="exemplo">Noite: Noche
+Manhã:</div>
+      <p class="legenda-exemplo">Diretiva implícita: a tarefa de tradução é inferida a partir do exemplo dado.</p>
+
+      <h4>Exemplos</h4>
+      <p>Exemplos atuam como demonstrações que guiam a IA Generativa a realizar uma tarefa. O prompt apresentado logo acima (<code>Noite: Noche / Manhã:</code>) é um exemplo de prompt <strong>One-Shot</strong>, ou seja, um prompt que contém exatamente um exemplo.</p>
+
+      <h4>Formatação da Saída</h4>
+      <p>Muitas vezes é desejável que a IA Generativa produza informações em certos formatos, por exemplo, arquivos CSV ou texto em formato Markdown. Para facilitar isso, basta adicionar instruções específicas para tanto, como no exemplo abaixo:</p>
+      <div class="exemplo">{PARAGRAFO}
+Resuma isso em formato CSV.</div>
+      <p class="legenda-exemplo">Instrução de formatação de saída: solicitação para resumir um parágrafo em formato CSV.</p>
+
+      <h4>Instruções de Estilo</h4>
+      <p>Instruções de estilo são um tipo de formatação de saída usado para modificar a saída estilisticamente, em vez de estruturalmente. Por exemplo:</p>
+      <div class="exemplo">Escreva um parágrafo claro e conciso sobre lhamas.</div>
+      <p class="legenda-exemplo">Instrução de estilo: solicita um texto "claro e conciso" sobre lhamas.</p>
+
+      <h4>Papel / Persona</h4>
+      <p>Uma <em>Role</em>, também conhecida como <em>persona</em>, é um componente frequentemente discutido que pode melhorar a escrita e o texto produzido em determinado estilo. Por exemplo:</p>
+      <div class="exemplo">Finja que você é um pastor de ovelhas e escreva um limerick sobre lhamas.</div>
+      <p class="legenda-exemplo">Atribuição de papel/persona: o modelo é instruído a "fingir" ser um pastor de ovelhas.</p>
+
+      <h4>Informações Adicionais</h4>
+      <p>Muitas vezes é necessário incluir informações adicionais no prompt. Por exemplo, se a diretiva for escrever um e-mail, pode-se incluir informações como o nome e o cargo do remetente, de modo que a IA Generativa consiga assinar adequadamente o e-mail em nome dessa pessoa.</p>
+    </section>
+
+    <section id="termos-instrucao">
+      <h3>4.2 Termos de Instrução</h3>
+      <p>Além dos componentes que compõem um prompt, é importante conhecer o vocabulário usado para descrever o processo de prompting como um todo. Esses termos são chamados de termos de instrução (<em>Prompting Terms</em>) e ajudam a explicar como os prompts são criados, encadeados e aprimorados.</p>
+
+      <h4>Prompting</h4>
+      <p><em>Prompting</em> é o ato de fornecer um prompt a uma IA Generativa para que ela gere uma resposta. Por exemplo, enviar um texto ou carregar uma imagem para o modelo já caracteriza um prompting.</p>
+
+      <h4>Prompt Chain</h4>
+      <p>Uma <em>prompt chain</em> é uma sequência de dois ou mais prompt templates usados um após o outro; o processo de criar essa sequência é chamado de <em>prompt chaining</em>. Nela, a saída gerada pelo primeiro template é usada para preencher o template seguinte, e assim por diante, até que todos os templates da cadeia tenham sido utilizados.</p>
+
+      <h4>Prompt Engineering</h4>
+      <p><em>Prompt engineering</em> é o processo iterativo de aprimorar um prompt: a cada iteração, modifica-se ou substitui-se a técnica de prompting usada, buscando melhorar os resultados obtidos.</p>
+
+      <h4>Prompting Technique</h4>
+      <p>Uma <em>prompting technique</em> é um modelo que define como estruturar um prompt — ou como organizar dinamicamente uma sequência de vários prompts. Ela pode envolver lógica condicional, execução em paralelo ou outros mecanismos que coordenam múltiplos prompts entre si.</p>
+
+    </section>
+  </section>
+
+  <section id="motivacao">
+    <h2>5. Por que a Engenharia de Prompt é importante</h2>
+
+    <p>Modelos de linguagem já demonstram capacidades notáveis em tarefas como geração de conteúdo, apoio à tomada de decisão e até descoberta científica. Ainda assim, o desempenho desses modelos é bastante sensível à forma como são instruídos: o mesmo modelo pode produzir resultados muito melhores ou muito piores dependendo de como o prompt é escrito.</p>
+
+    <p>Quando a engenharia de prompt é praticada de forma pouco cuidadosa, isso pode levar a saídas inconsistentes, alucinações (respostas incorretas apresentadas com aparência de certeza) e resultados que não se repetem bem entre tarefas diferentes. Por isso, dominar essa prática é essencial para quem trabalha com IA Generativa.</p>
+
+    <p>Em vez de prompts vagos ou genéricos, prompts bem estruturados e ricos em contexto ajudam o modelo a gerar respostas mais precisas, relevantes e detalhadas. Esse processo envolve refinar a redação do prompt, adicionar restrições — como um limite de palavras — e especificar o formato ou o estilo desejado para a resposta. O exemplo a seguir ilustra essa diferença:</p>
+
+    <div class="exemplo">Explique machine learning.</div>
+    <p class="legenda-exemplo">Prompt básico: tende a gerar uma resposta genérica, vaga e pouco clara.</p>
+
+    <div class="exemplo">Explique machine learning de forma simples, com exemplos, focando em aprendizado supervisionado e não supervisionado. Mantenha a resposta em até 200 palavras.</div>
+    <p class="legenda-exemplo">Prompt elaborado por engenharia de prompt: tende a gerar uma resposta detalhada, estruturada e relevante.</p>
+
+    <p>Por esse motivo, a engenharia de prompt é amplamente aplicada em sistemas como chatbots, ferramentas de geração de conteúdo e sistemas de apoio à decisão, ajudando a reduzir ambiguidades e a alinhar melhor as respostas do modelo com a intenção de quem o utiliza.</p>
+
+    <p>As técnicas de prompting costumam ser organizadas em dois grandes grupos. De um lado, estão as abordagens fundamentais, como o <em>zero-shot prompting</em> — quando o modelo recebe apenas a instrução da tarefa, sem nenhum exemplo — e o <em>few-shot prompting</em> — quando alguns exemplos da tarefa são incluídos no próprio prompt para guiá-lo. De outro, estão estratégias mais avançadas, como o raciocínio em cadeia (<em>chain-of-thought reasoning</em>), a geração aumentada por recuperação (<em>retrieval-augmented generation</em>, ou RAG), mecanismos de autoconsistência (<em>self-consistency</em>) e frameworks que combinam raciocínio e ação, como o <em>ReAct</em>, que intercalam etapas de raciocínio com o uso de ferramentas externas para resolver a tarefa. Essas técnicas serão estudadas em detalhe na Unidade 2 desta disciplina.</p>
+  </section>
+
+  <section id="configuracao-saida">
+    <h2>6. Configuração da Saída do LLM</h2>
+
+    <p>A maioria dos LLMs oferece diversas opções que controlam a saída gerada. Uma engenharia de prompt eficaz exige ajustar essas configurações de forma adequada à tarefa que se quer resolver.</p>
+
+    <h3>Tamanho da saída</h3>
+
+    <p>Uma configuração importante é o número de tokens a serem gerados na resposta. Gerar mais tokens exige mais computação do modelo, o que leva a maior consumo de energia, tempos de resposta potencialmente mais lentos e custos mais altos.</p>
+
+    <p>Reduzir o tamanho da saída não torna o LLM mais conciso em termos de estilo ou de conteúdo — apenas faz com que ele pare de prever novos tokens assim que o limite é atingido. Se a tarefa exige uma resposta curta, também é necessário elaborar o prompt para que ele produza esse tipo de resposta.</p>
+
+    <p>A restrição do tamanho da saída é especialmente importante em algumas técnicas de prompting, como o ReAct, em que o modelo tende a continuar emitindo tokens desnecessários depois de já ter gerado a resposta desejada.</p>
+
+    <h3>Controles de amostragem</h3>
+    <p>Os LLMs não preveem, a rigor, um único token diretamente. Em vez disso, eles calculam uma probabilidade para cada token possível do seu vocabulário, e essas probabilidades são então amostradas para determinar qual será o próximo token produzido. Temperatura, top-K e top-P são as configurações mais comuns usadas para processar essas probabilidades e escolher um único token de saída.</p>
+
+    <h4>Temperatura</h4>
+    <p>A temperatura controla o grau de aleatoriedade na seleção do token. Temperaturas mais baixas são adequadas para prompts que esperam uma resposta mais determinística, enquanto temperaturas mais altas tendem a gerar resultados mais diversos ou inesperados. Uma temperatura igual a 0 (chamada de <em>greedy decoding</em>, ou decodificação gulosa) é determinística: o token de maior probabilidade é sempre selecionado — embora, se dois tokens tiverem exatamente a mesma probabilidade mais alta, a forma como esse empate é resolvido possa fazer com que nem sempre se obtenha a mesma saída, mesmo com temperatura 0.</p>
+
+    <p>Temperaturas próximas do valor máximo tendem a gerar saídas mais aleatórias. E, à medida que a temperatura aumenta, todos os tokens tendem a se tornar igualmente prováveis de serem escolhidos como o próximo token.</p>
+
+    <p>Vamos observar o efeito da Temperatura (T) no exemplo da Figura 1. Observe que, 
+      com um valor T mais alto (T > 1), palavras como "nervoso" têm uma probabilidade consideravelmente maior 
+      de serem escolhidas, enquanto "feliz" se torna menos dominante. Com um valor T mais baixo (T < 1), a escolha 
+      de "feliz" é quase garantida, enquanto as outras são efetivamente ignoradas. Note que 75% da probabilidade 
+      corresponde a uma palavra em T=0,25, duas palavras em T=1 e quatro palavras em T=2.
+    </p>
+
+    <figure class="figura-central">
+      <img src="temperatura.png" alt="Descrição da figura sobre temperatura" style="width: 400px; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 1: efeito da temperatura (T) na distribuição de probabilidade dos tokens.</figcaption>
+    </figure>
+
+
+    <h4>Top-K, Top-P e Min-P</h4>
+    <p>Top-K e top-P (também chamado de <em>nucleus sampling</em>, ou amostragem por núcleo) são duas configurações usadas 
+      em LLMs para restringir a escolha do próximo token a um subconjunto dos tokens com maior probabilidade prevista. 
+      Assim como a temperatura, essas configurações controlam a aleatoriedade e a diversidade do texto gerado.</p>
+
+    <p>A amostragem top-K seleciona os K tokens mais prováveis da distribuição prevista pelo modelo. 
+      Quanto maior o valor de top-K, mais criativa e variada tende a ser a saída do modelo; quanto menor o valor, 
+      mais restrita e factual ela tende a ser. Um top-K igual a 1 equivale à decodificação gulosa. Observe o exemplo da Figura 2
+      com K=3, os quatro tokens de menor probabilidade são descartados completamente e o modelo seleciona amostras apenas de 
+      “feliz”, “contente” e “animado”. 
+    </p>
+
+    <figure class="figura-central">
+        <img src="topk.png" alt="Descrição da figura Top-k" style="width: 400px; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 2: Amostragem Top-K.</figcaption>
+    </figure>
+
+    <p>A amostragem top-P seleciona os tokens de maior probabilidade cuja soma acumulada não ultrapasse um determinado
+       valor (P). Os valores de P variam de 0 (decodificação gulosa) a 1 (todos os tokens do vocabulário do modelo). 
+       No exemplo da Figura 3, o modelo começa com "feliz" (56,4%), depois adiciona "contente" (18,8%), totalizando 75,2%, e em seguida
+        "animado" (13,9%), chegando a 89,1%. Adicionando "alegre" (5,7%), o total chega a 94,7%, o que atinge o limite 
+        de 90% – portanto, o processo termina aí. Como são necessários 4 tokens para atingir o limite, esses são os que 
+        são mantidos.
+    </p>
+      <figure class="figura-central">
+        <img src="topp.png" alt="Descrição da figura 2" style="width: 400px; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 3: Amostragem Top-P.</figcaption>
+      </figure>
+
+    <p>A amostragem min-P seleciona os tokens cuja probabilidade não fique abaixo de uma fração da probabilidade do token 
+      mais provável, definida pelo parâmetro P. Por exemplo (Figura 4), se o token mais provável tiver 56,4% de probabilidade e P 
+      for 0,1, o limiar de corte fica em 5,64%. Diferente do top-P, esse limiar se ajusta dinamicamente à confiança do 
+      modelo, o que costuma evitar a inclusão de tokens irrelevantes quando a distribuição de probabilidades está mais 
+      achatada.</p>
+      
+      <figure class="figura-central">
+        <img src="minp.png" alt="Descrição da figura 3" style="width: 400px; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 4: Amostragem min-P.</figcaption>
+      </figure>
+
+        <p>A melhor forma de escolher entre top-K, top-P e min-P é experimentar os métodos — separadamente ou combinados — e observar qual deles produz os resultados desejados.</p>
+
+
+    <h3>Juntando tudo</h3>
+
+    <p>Na prática, temperatura, top-K e top-P raramente são usados isoladamente: é a combinação entre eles que determina o comportamento final do modelo. Uma temperatura alta usada sozinha, por exemplo, pode permitir que tokens muito improváveis apareçam na saída, produzindo um texto sem sentido. Já quando essa mesma temperatura alta é combinada com uma filtragem por top-P, é possível obter variedade criativa sem o risco de o texto se desconectar completamente do que faz sentido.</p>
+
+    <p>A ordem em que esses filtros são aplicados também importa — existe mais de uma forma de organizar esse processo, chamado de <em>pipeline de amostragem</em>. No fluxo mais comum, a temperatura é aplicada primeiro, reescalando a distribuição de probabilidades dos tokens; em seguida, aplica-se a filtragem por top-K ou por top-P sobre essa distribuição já reescalada; por fim, o próximo token é escolhido por amostragem aleatória dentro do conjunto de tokens que restou. Essa abordagem em camadas permite ajustar, de forma bastante controlada, o equilíbrio entre coerência e criatividade da saída.</p>
+
+    <p>Existe também um fluxo alternativo, adotado por exemplo pelo llama.cpp: nele, a filtragem por top-K/top-P ocorre primeiro, ainda sobre a distribuição de probabilidades original — sem a influência da temperatura —, e só depois a temperatura é aplicada sobre o conjunto de tokens já filtrado. Como a ordem das operações é diferente, esse pipeline pode produzir resultados bastante distintos do primeiro, mesmo usando exatamente os mesmos valores de temperatura, top-K e top-P.</p>
+
+    <p>Com base nisso, é possível chegar a algumas recomendações práticas, de acordo com o tipo de tarefa:</p>
+    <ul>
+      <li>Para tarefas factuais ou determinísticas — como resumir um texto, gerar código ou responder perguntas —, costuma funcionar melhor usar uma temperatura baixa combinada com um top-P alto. Isso mantém o foco nas respostas mais prováveis, mas ainda preserva uma escrita natural, evitando um texto excessivamente repetitivo ou mecânico.</li>
+      <li>Para tarefas criativas — como brainstorming, redação de narrativas ou textos publicitários —, costuma funcionar melhor usar uma temperatura alta combinada com um top-P mais baixo. Isso permite que o modelo escolha palavras mais inesperadas, mas ainda descarta as opções realmente improváveis, evitando que o texto perca completamente o sentido.</li>
+    </ul>
+
+    <p>Em resumo: combinar uma temperatura baixa com um top-P generoso ajuda a evitar repetições mecânicas sem perder precisão; a combinação oposta — temperatura alta com um top-P mais restrito — abre espaço para respostas mais criativas, mas dentro de limites razoáveis. Vale destacar que essas são diretrizes gerais, não regras fixas: os melhores valores de temperatura, top-K e top-P (assim como do min-P, um parâmetro mais recente que impõe um limiar mínimo de probabilidade para um token ser considerado) sempre dependem do contexto específico de uso e costumam exigir ajuste experimental para cada tarefa.</p>
+  </section>
+
+  <section id="referencias">
+    <h2>7. Referências</h2>
+    <ul>
+      <li>
+        BOONSTRA, L. <strong>Prompt Engineering</strong>. [S. l.]: Google, fev. 2025. (Whitepaper). Disponível em: <a href="https://www.kaggle.com/whitepaper-prompt-engineering" target="_blank" rel="noopener">https://www.kaggle.com/whitepaper-prompt-engineering</a>. Acesso em: 20 ago. 2026.
+      </li>
+      <li>
+        DEBNATH, T.; SIDDIKY, M. N. A.; RAHMAN, M. E.; DAS, P.; GUHA, A. K.;
+        RAHMAN, M. R.; KABIR, H. M. D. <strong>A comprehensive survey of prompt engineering and context engineering techniques in large language models</strong>. Computer Science Review, v. 62, art. 100979, 2026. DOI: 10.1016/j.cosrev.2026.100979. Disponível em: <a href="https://www.sciencedirect.com/science/article/pii/S1574013726000870" target="_blank" rel="noopener">https://www.sciencedirect.com/science/article/pii/S1574013726000870</a>. Acesso em: 17 ago. 2026.
+      </li>
+      <li>
+        MUSE, K. <strong>How Temperature, Top-K, Top-P, and Min-P Control LLM Output</strong>. Ken Muse (blog), 3 abr. 2026. Disponível em: <a href="https://www.kenmuse.com/blog/how-temp-topk-topp-minp-control-llm-output/" target="_blank" rel="noopener">https://www.kenmuse.com/blog/how-temp-topk-topp-minp-control-llm-output/</a>. Acesso em: 20 ago. 2026.
+      </li>
+      <li>
+        SCHULHOFF, S.; ILIE, M.; BALEPUR, N.; KAHADZE, K.; LIU, A.; SI, C.;
+        LI, Y.; GUPTA, A.; HAN, H.; SCHULHOFF, S.; DULEPET, P. S.; VIDYADHARA, S.;
+        KI, D.; AGRAWAL, S.; PHAM, C.; KROIZ, G.; LI, F.; TAO, H.; SRIVASTAVA, A.;
+        DA COSTA, H.; GUPTA, S.; ROGERS, M. L.; GONCEARENCO, I.; SARLI, G.;
+        GALYNKER, I.; PESKOFF, D.; CARPUAT, M.; WHITE, J.; ANADKAT, S.; HOYLE, A.;
+        RESNIK, P. <strong>The Prompt Report: A Systematic Survey of Prompt Engineering Techniques</strong>. arXiv preprint arXiv:2406.06608, 2024. Disponível em: <a href="https://arxiv.org/html/2406.06608v1" target="_blank" rel="noopener">https://arxiv.org/html/2406.06608v1</a>. Acesso em: 17 ago. 2026.
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p style="margin-bottom: 5px; font-size: 12px;">
+    Material didático produzido para a disciplina Aplicações de Modelos de Linguagem Natural — Unidade 1.
+  </p>
+  <p style="margin-bottom: 5px; font-size: 12px;">
+    Todo o conteúdo deste material foi elaborado com base nos artigos listados nas referências, previamente selecionados 
+    e revisados pela professora responsável pela disciplina. 
+  </p>
+  <p style="margin-bottom: 5px; font-size: 12px;">
+    A inteligência artificial foi utilizada exclusivamente para a 
+    tradução e a adaptação do conteúdo ao formato de material didático.
+  </p>
+</footer>
+
+<script>
+  (function () {
+    var botao = document.getElementById('botao-menu');
+    var menu = document.getElementById('menu-secoes');
+    var overlay = document.getElementById('overlay');
+
+    function abrirMenu() {
+      menu.classList.add('aberto');
+      overlay.classList.add('aberto');
+      botao.classList.add('aberto');
+      botao.setAttribute('aria-expanded', 'true');
+    }
+
+    function fecharMenu() {
+      menu.classList.remove('aberto');
+      overlay.classList.remove('aberto');
+      botao.classList.remove('aberto');
+      botao.setAttribute('aria-expanded', 'false');
+    }
+
+    botao.addEventListener('click', function () {
+      if (menu.classList.contains('aberto')) {
+        fecharMenu();
+      } else {
+        abrirMenu();
+      }
+    });
+
+    overlay.addEventListener('click', fecharMenu);
+
+    var linksMenu = menu.querySelectorAll('a');
+    for (var i = 0; i < linksMenu.length; i++) {
+      linksMenu[i].addEventListener('click', fecharMenu);
+    }
+
+    document.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape') {
+        fecharMenu();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
