@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unidade 2 — Técnicas de Prompt</title>
+<style>
+  :root {
+    --texto: #1f2328;
+    --texto-suave: #4b5157;
+    --linha: #e3e5e8;
+    --acento: #2f5fa3;
+    --fundo-code: #f5f6f8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: var(--texto);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ---------- Cabeçalho fixo com menu sanduíche ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--linha);
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    z-index: 100;
+  }
+
+  .menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .menu-btn span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background-color: var(--texto);
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .menu-btn.aberto span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.aberto span:nth-child(2) { opacity: 0; }
+  .menu-btn.aberto span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  header .titulo-curto {
+    margin-left: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--texto-suave);
+    font-weight: 600;
+  }
+
+  /* ---------- Painel de navegação (escondido por padrão) ---------- */
+  nav#menu-secoes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    max-width: 80vw;
+    background-color: #ffffff;
+    border-right: 1px solid var(--linha);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+    padding: 4.5rem 1.5rem 1.5rem 1.5rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 99;
+    overflow-y: auto;
+  }
+
+  nav#menu-secoes.aberto {
+    transform: translateX(0);
+  }
+
+  nav#menu-secoes h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--texto-suave);
+    margin: 0 0 1rem 0;
+  }
+
+  nav#menu-secoes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav#menu-secoes li {
+    margin-bottom: 0.35rem;
+  }
+
+  nav#menu-secoes a {
+    display: block;
+    padding: 0.5rem 0.6rem;
+    color: var(--texto);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  nav#menu-secoes a:hover {
+    background-color: var(--fundo-code);
+    color: var(--acento);
+  }
+
+  nav#menu-secoes ul ul {
+    margin-left: 0.9rem;
+    margin-top: 0.25rem;
+  }
+
+  nav#menu-secoes ul ul a {
+    font-size: 0.88rem;
+    color: var(--texto-suave);
+  }
+
+  /* fundo escurecido quando o menu está aberto */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 98;
+  }
+
+  #overlay.aberto {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ---------- Conteúdo ---------- */
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem 1.5rem;
+  }
+
+  main h1 {
+    font-size: 1.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitulo {
+    color: var(--texto-suave);
+    margin-top: 0;
+    margin-bottom: 2.5rem;
+    font-size: 1rem;
+  }
+
+  section {
+    margin-bottom: 3rem;
+    scroll-margin-top: 5rem;
+  }
+
+  section h2 {
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--linha);
+    padding-bottom: 0.4rem;
+    margin-bottom: 1.1rem;
+    color: var(--texto);
+  }
+
+  section h3 {
+    font-size: 1.15rem;
+    margin-top: 1.8rem;
+    margin-bottom: 0.7rem;
+    color: var(--texto);
+  }
+
+  section h4 {
+    font-size: 1.02rem;
+    margin-top: 1.4rem;
+    margin-bottom: 0.5rem;
+    color: var(--acento);
+  }
+
+  p { margin: 0 0 1rem 0; }
+
+  ul.lista-tecnica {
+    margin: 0 0 1rem 0;
+    padding-left: 1.2rem;
+  }
+
+  ul.lista-tecnica li {
+    margin-bottom: 0.6rem;
+  }
+
+  .exemplo {
+    background-color: var(--fundo-code);
+    border-left: 3px solid var(--acento);
+    border-radius: 4px;
+    padding: 0.8rem 1rem;
+    margin: 0.8rem 0 1.2rem 0;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.92rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
+  .legenda-exemplo {
+    font-size: 0.85rem;
+    color: var(--texto-suave);
+    margin-top: -0.9rem;
+    margin-bottom: 1.2rem;
+    font-style: italic;
+  }
+
+  blockquote {
+    margin: 0 0 1rem 0;
+    padding: 0.6rem 1rem;
+    border-left: 3px solid #c9cdd2;
+    color: var(--texto-suave);
+    font-style: italic;
+  }
+
+  strong { color: var(--texto); }
+
+  #referencias ul {
+    padding-left: 1.2rem;
+  }
+
+  #referencias li {
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--texto-suave);
+    font-size: 0.85rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--linha);
+  }
+
+  footer p {
+    margin: 0 0 0.4rem 0;
+  }
+
+  footer p:last-child {
+    margin-bottom: 0;
+  }
+
+  code {
+    background-color: var(--fundo-code);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" id="botao-menu" aria-label="Abrir menu de seções" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="titulo-curto">Unidade 2 — Técnicas de Prompt</span>
+</header>
+
+<div id="overlay"></div>
+
+<nav id="menu-secoes" aria-label="Navegação por seções">
+  <h2>Seções</h2>
+  <ul>
+    <li><a href="#introducao">1. Introdução</a></li>
+    <li><a href="#zero-shot">2. Zero-shot Prompting</a></li>
+    <li><a href="#few-shot">3. Few-shot Prompting</a></li>
+    <li><a href="#cot">4. Chain-of-Thought (CoT) Prompting</a></li>
+    <li><a href="#react">5. ReAct Prompting</a></li>
+    <li><a href="#referencias">6. Referências</a></li>
+  </ul>
+</nav>
+
+<main>
+  <h1>Unidade 2 — Técnicas de Prompt</h1>
+  <p class="subtitulo">Disciplina: Aplicações de Modelos de Linguagem Natural</p>
+
+  <section id="introducao">
+    <h2>1. Introdução</h2>
+
+    <p>Na Unidade 1, vimos os conceitos fundamentais da engenharia de prompt: o que é um <strong>prompt</strong>, como ele pode ser construído a partir de um <strong>prompt template</strong> (modelo de prompt) e qual é o vocabulário básico usado para descrever seus componentes — diretiva, exemplos, formatação de saída, instruções de estilo, papel/persona e informações adicionais. Vimos também por que a forma como um prompt é escrito afeta diretamente a qualidade da resposta gerada por um modelo de linguagem.</p>
+
+    <p>Nesta unidade, avançamos para <strong>técnicas concretas de prompting</strong> — estratégias específicas para estruturar prompts de modo a obter respostas melhores, mais precisas e mais confiáveis. Estudaremos quatro técnicas amplamente utilizadas na prática. Duas delas são abordagens fundamentais, que diferem principalmente pela quantidade de exemplos fornecidos ao modelo: o <strong>zero-shot prompting</strong> (nenhum exemplo) e o <strong>few-shot prompting</strong> (alguns exemplos). As outras duas são estratégias mais avançadas, voltadas para melhorar o raciocínio do modelo: o <strong>Chain-of-Thought (CoT) prompting</strong>, que estrutura o raciocínio em passos, e o <strong>ReAct prompting</strong>, que combina raciocínio com o uso de ferramentas e ações externas.</p>
+
+    <p>Para cada técnica, veremos o que ela é, como funciona, exemplos práticos de aplicação, e suas principais vantagens e limitações.</p>
+  </section>
+
+  <section id="zero-shot">
+    <h2>2. Zero-shot Prompting</h2>
+
+    <p><strong>Zero-shot prompting</strong> é a abordagem em que o modelo realiza uma tarefa sem receber nenhum exemplo prévio de como executá-la. O modelo se apoia unicamente no conhecimento adquirido durante o seu pré-treinamento — relações semânticas, estrutura da linguagem e raciocínio contextual — para interpretar a instrução e gerar uma resposta. Como não há exemplos de saída no prompt, o modelo precisa inferir o que se espera dele apenas a partir do texto da instrução.</p>
+
+    <p>Diferente do machine learning tradicional, que depende de grandes conjuntos de dados rotulados para treinar um modelo em uma tarefa específica, o zero-shot prompting aproveita a capacidade de generalização de um modelo já pré-treinado. Isso permite realizar tarefas como classificação de texto, raciocínio lógico e geração de conteúdo sem que seja necessário nenhum dado de treinamento específico para o domínio da tarefa. Por outro lado, a eficácia dessa abordagem depende muito da clareza do prompt: instruções ambíguas ou mal formuladas tendem a gerar respostas imprecisas ou inconsistentes.</p>
+
+    <h3>Como funciona</h3>
+    <p>O modelo utiliza o conhecimento linguístico, as relações conceituais e as associações contextuais que adquiriu durante o pré-treinamento para interpretar o prompt e gerar uma resposta adequada, sem depender de treinamento adicional ou de exemplos explícitos para a tarefa em questão. Ou seja, a resposta é gerada unicamente a partir da instrução fornecida e do conhecimento interno já acumulado pelo modelo — quanto mais completo e abrangente for esse conhecimento, e quanto maior for a capacidade do modelo de generalizar para situações novas, melhor tende a ser o resultado do zero-shot prompting.</p>
+
+    <h3>Exemplos</h3>
+
+    <div class="exemplo">Categorize o seguinte texto como positivo ou negativo:
+"Este filme foi absolutamente fantástico! A atuação foi excelente, o roteiro foi envolvente e os efeitos especiais foram impressionantes."</div>
+    <p class="legenda-exemplo">Exemplo 1 — Classificação por zero-shot: mesmo sem qualquer treinamento prévio específico para análise de sentimento, o modelo deve responder "positivo".</p>
+
+    <div class="exemplo">Traduza a frase a seguir para o francês:
+"Bom dia, como você está?"</div>
+    <p class="legenda-exemplo">Exemplo 2 — Tradução por zero-shot: mesmo sem receber nenhum exemplo de tradução, o modelo consegue traduzir corretamente a frase, pois foi treinado com grandes volumes de dados multilíngues.</p>
+
+    <div class="exemplo">Escreva um poema curto sobre o outono.</div>
+    <p class="legenda-exemplo">Exemplo 3 — Geração de conteúdo por zero-shot: o modelo produz um poema original apenas a partir da instrução, sem receber nenhum exemplo de poema.</p>
+
+    <div class="exemplo">Destaque os principais temas do trecho abaixo:
+
+"Toda vez que visito a casa onde cresci, sinto uma mistura estranha de alegria e tristeza. As paredes ainda guardam o cheiro do café da manhã que minha avó preparava, mas ela já não está mais lá para prepará-lo. Foi há tanto tempo, e ainda assim parece que foi ontem."</div>
+    <p class="legenda-exemplo">Exemplo 4 — Análise de texto por zero-shot: mesmo sem exemplos prévios, o modelo consegue identificar temas como nostalgia, a passagem do tempo e a natureza agridoce da memória no trecho apresentado.</p>
+
+    <h3>Vantagens</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Flexibilidade:</strong> o modelo consegue realizar uma ampla variedade de tarefas sem precisar de nenhum ajuste específico.</li>
+      <li><strong>Dispensa treinamento específico:</strong> elimina a necessidade de conjuntos de dados rotulados, reduzindo o custo de desenvolvimento.</li>
+      <li><strong>Implantação rápida:</strong> facilita testes e implementação ágil em diferentes domínios.</li>
+      <li><strong>Avaliação da generalização do modelo:</strong> permite avaliar a capacidade do modelo de compreender e se adaptar a desafios diferentes daqueles vistos durante o treinamento.</li>
+    </ul>
+
+    <h3>Limitações</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Precisão:</strong> tende a ser menor do que a de modelos ajustados especificamente para a tarefa (fine-tuned), já que não há otimização para o caso em questão, a interpretação do prompt pelo modelo pode variar, e tarefas muito especializadas exigem uma compreensão mais profunda que o zero-shot nem sempre consegue capturar.</li>
+      <li><strong>Sensibilidade ao prompt:</strong> pequenas variações na forma como o prompt é escrito podem alterar significativamente a interpretação e a resposta do modelo, e instruções pouco claras tendem a gerar respostas inconsistentes ou irrelevantes.</li>
+      <li><strong>Viés:</strong> por depender de modelos pré-treinados, o zero-shot está sujeito a vieses presentes nos dados de treinamento, como vieses demográficos e culturais, viés de recência (favorecer informações mais recentes em detrimento do contexto histórico) e reforço de estereótipos.</li>
+    </ul>
+  </section>
+
+  <section id="few-shot">
+    <h2>3. Few-shot Prompting</h2>
+
+    <p><strong>Few-shot prompting</strong> aprimora a capacidade do modelo de executar uma tarefa fornecendo alguns exemplos — chamados de demonstrações — dentro do próprio prompt. Diferente do zero-shot, que depende exclusivamente do conhecimento pré-treinado, o few-shot usa essas demonstrações como orientação contextual para melhorar a precisão e a relevância da resposta. Essa técnica ocupa uma posição intermediária entre o zero-shot (nenhum exemplo) e o fine-tuning completo (que exige grandes conjuntos de dados rotulados), permitindo adaptar o modelo a uma tarefa específica sem abrir mão da flexibilidade típica do prompting.</p>
+
+    <h3>Como funciona</h3>
+    <p>O princípio central do few-shot prompting é incluir, no próprio prompt, demonstrações específicas da tarefa que se quer que o modelo execute. Essas demonstrações funcionam como instruções implícitas que orientam o comportamento do modelo e costumam apresentar três características: cada demonstração traz um par de <strong>entrada e saída</strong> (por exemplo, uma pergunta e sua resposta esperada); há <strong>consistência de formato</strong> entre os exemplos, o que ajuda o modelo a reconhecer o padrão estrutural do prompt; e os exemplos têm <strong>relevância</strong> para a tarefa-alvo, garantindo que o modelo extraia informações realmente úteis.</p>
+
+    <p>Ao processar essas demonstrações, o modelo utiliza um mecanismo chamado <em>in-context learning</em> (aprendizado no contexto), que pode ser dividido em quatro etapas: primeiro, o modelo realiza o <strong>reconhecimento de padrões</strong>, analisando as relações entre as entradas e saídas apresentadas no prompt; em seguida, faz a <strong>inferência da tarefa</strong>, deduzindo a natureza do problema a partir dos exemplos observados; depois, aplica a <strong>generalização</strong>, estendendo o padrão aprendido para entradas ainda não vistas; e, por fim, realiza a <strong>aplicação</strong>, produzindo uma resposta para a nova entrada com base na extrapolação das demonstrações fornecidas.</p>
+
+    <h3>Exemplos</h3>
+
+    <div class="exemplo">Avaliação: "A comida estava deliciosa e o atendimento foi excelente." → Positiva
+Avaliação: "Muito demorado e o prato veio errado." → Negativa
+
+Classifique esta nova avaliação com base nos exemplos acima:
+{NOVA_AVALIACAO}</div>
+    <p class="legenda-exemplo">Exemplo 5 — Classificação de texto por few-shot prompting: o modelo aprende o padrão a partir de avaliações já classificadas e o aplica a uma nova avaliação.</p>
+
+    <div class="exemplo">Inglês: "Hello, how are you?" → Espanhol: "Hola, ¿cómo estás?"
+Inglês: "See you tomorrow." → Espanhol: "Nos vemos mañana."
+
+Traduza a frase a seguir para o espanhol, seguindo o padrão dos exemplos acima:
+{FRASE_EM_INGLES}</div>
+    <p class="legenda-exemplo">Exemplo 6 — Tradução automática por few-shot prompting.</p>
+
+    <div class="exemplo">Entrada: soma(2, 3) → Saída: 5
+Entrada: soma(10, 5) → Saída: 15
+
+Complete a função a seguir, seguindo o padrão dos exemplos acima:
+def soma(a, b):
+    # complete aqui</div>
+    <p class="legenda-exemplo">Exemplo 7 — Geração de código por few-shot prompting: o modelo completa a função com base nos pares de entrada e saída fornecidos.</p>
+
+    <div class="exemplo">Pergunta: "Qual é a capital da França?" → Resposta: "Paris."
+Pergunta: "Qual é a capital do Japão?" → Resposta: "Tóquio."
+
+Responda à pergunta a seguir, seguindo o padrão dos exemplos acima:
+{NOVA_PERGUNTA}</div>
+    <p class="legenda-exemplo">Exemplo 8 — Perguntas e respostas por few-shot prompting: o modelo responde a novas perguntas factuais com base em exemplos de perguntas e respostas fornecidos anteriormente.</p>
+
+    <h3>Vantagens</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Maior precisão:</strong> ao se apoiar em exemplos concretos, o modelo tende a produzir respostas mais precisas do que no zero-shot.</li>
+      <li><strong>Melhor adaptação à tarefa:</strong> o modelo consegue aprender padrões específicos a partir de um número pequeno de exemplos.</li>
+      <li><strong>Maior controle do usuário:</strong> ao escolher cuidadosamente as demonstrações incluídas no prompt, o usuário pode ajustar o comportamento do modelo de forma mais precisa.</li>
+    </ul>
+
+    <h3>Limitações</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Sensibilidade aos exemplos:</strong> o desempenho do modelo depende fortemente da qualidade, da relevância e até da ordem dos exemplos escolhidos.</li>
+      <li><strong>Maior custo em tokens:</strong> incluir exemplos no prompt aumenta o tamanho da entrada, o que pode elevar o custo computacional.</li>
+      <li><strong>Desempenho nem sempre superior:</strong> apesar de seus benefícios, o few-shot prompting nem sempre supera o desempenho de modelos ajustados especificamente (fine-tuned) para a tarefa.</li>
+    </ul>
+  </section>
+
+  <section id="cot">
+    <h2>4. Chain-of-Thought (CoT) Prompting</h2>
+
+    <p><strong>Chain-of-Thought (CoT) prompting</strong>, ou "encadeamento de pensamento", é uma técnica que melhora a capacidade de raciocínio dos modelos de linguagem ao dividir problemas complexos em passos organizados e sequenciais, em vez de exigir uma resposta direta e imediata. Essa abordagem é especialmente útil em tarefas que exigem raciocínio em múltiplas etapas, como problemas matemáticos, análise lógica e raciocínio de senso comum, e torna as respostas mais interpretáveis e transparentes, já que o processo de raciocínio do modelo fica explícito, e não escondido por trás da resposta final.</p>
+
+    <h3>Como funciona</h3>
+    <p>Ao contrário do prompting padrão, que busca uma resposta imediata, o CoT prompting orienta o modelo a explicitar seu processo de raciocínio em etapas antes de chegar a uma conclusão. Esse método traz três benefícios principais: a <strong>decomposição de tarefas complexas</strong>, em que o modelo divide sistematicamente um problema em passos menores e mais gerenciáveis; a <strong>redução de erros</strong>, já que seguir um caminho de raciocínio estruturado diminui a chance de erros causados por "adivinhação" ou má interpretação do problema; e a <strong>melhora da interpretabilidade</strong>, uma vez que, com os passos de raciocínio explícitos, a resposta final se torna mais compreensível e mais fácil de verificar.</p>
+
+    <h3>Exemplos</h3>
+
+    <p>Os três exemplos a seguir, extraídos do livro <em>Prompt Engineering</em>, de Lee Boonstra (Google, 2025), mostram a evolução de uma mesma pergunta matemática: primeiro sem nenhuma instrução de raciocínio, depois com Chain-of-Thought no formato zero-shot e, por fim, com Chain-of-Thought combinado a um exemplo (one-shot).</p>
+
+    <div class="exemplo">Prompt:
+Quando eu tinha 3 anos, meu(minha) parceiro(a) tinha 3 vezes a minha idade. Agora, tenho 20 anos. Qual é a idade do(a) meu(minha) parceiro(a)?
+
+Saída:
+63 anos</div>
+    <p class="legenda-exemplo">Exemplo 9 — Prompt sem Chain-of-Thought: sem nenhuma instrução para raciocinar passo a passo, o modelo erra o cálculo e responde "63 anos" — a idade correta é 26 anos.</p>
+
+    <div class="exemplo">Prompt:
+Quando eu tinha 3 anos, meu(minha) parceiro(a) tinha 3 vezes a minha idade. Agora, tenho 20 anos. Qual é a idade do(a) meu(minha) parceiro(a)? Vamos pensar passo a passo.
+
+Saída:
+1. Vamos assumir que a minha idade atual é "x" anos.
+2. Quando eu tinha 3 anos, a minha idade era 3 anos.
+3. A idade do(a) meu(minha) parceiro(a) naquela época era 3 vezes a minha idade, ou seja, 3 × 3 = 9 anos.
+4. Agora tenho 20 anos, o que significa que a minha idade aumentou 20 − 3 = 17 anos desde quando eu tinha 3 anos.
+5. Como a idade do(a) meu(minha) parceiro(a) era 9 anos quando eu tinha 3 anos, e a minha idade aumentou 17 anos, a idade dele(a) também deve ter aumentado 17 anos.
+6. Portanto, a idade atual do(a) meu(minha) parceiro(a) é 9 + 17 = 26 anos.
+Logo, meu(minha) parceiro(a) tem 26 anos.</div>
+    <p class="legenda-exemplo">Exemplo 10 — Chain-of-Thought no formato zero-shot: ao acrescentar ao mesmo prompt a instrução "vamos pensar passo a passo", o modelo explicita cada etapa do raciocínio e chega à resposta correta, 26 anos.</p>
+
+    <div class="exemplo">Prompt:
+P: Quando meu irmão tinha 2 anos, eu tinha o dobro da idade dele. Agora tenho 40 anos. Qual é a idade do meu irmão? Vamos pensar passo a passo.
+R: Quando meu irmão tinha 2 anos, eu tinha 2 × 2 = 4 anos. Essa é uma diferença de idade de 2 anos, e eu sou mais velho(a). Agora tenho 40 anos, então meu irmão tem 40 − 2 = 38 anos. A resposta é 38.
+
+P: Quando eu tinha 3 anos, meu(minha) parceiro(a) tinha 3 vezes a minha idade. Agora, tenho 20 anos. Qual é a idade do(a) meu(minha) parceiro(a)? Vamos pensar passo a passo.
+R:
+
+Saída:
+Quando eu tinha 3 anos, meu(minha) parceiro(a) tinha 3 × 3 = 9 anos. Essa é uma diferença de idade de 6 anos, e meu(minha) parceiro(a) é mais velho(a). Agora tenho 20 anos, então meu(minha) parceiro(a) tem 20 + 6 = 26 anos. A resposta é 26.</div>
+    <p class="legenda-exemplo">Exemplo 11 — Chain-of-Thought com um exemplo (one-shot): ao incluir no prompt uma pergunta semelhante já resolvida passo a passo antes da nova pergunta, o modelo chega a uma resposta correta e mais direta, também 26 anos.</p>
+
+    <h3>Vantagens</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Raciocínio lógico mais estruturado:</strong> incentiva um pensamento organizado, reduzindo a chance de conclusões incorretas.</li>
+      <li><strong>Maior interpretabilidade:</strong> torna as respostas geradas pelo modelo mais fáceis de acompanhar e de verificar.</li>
+      <li><strong>Melhor desempenho em tarefas complexas:</strong> é especialmente eficaz em tarefas que exigem raciocínio profundo, como resolução de problemas matemáticos, dedução lógica e perguntas que envolvem múltiplos passos de inferência.</li>
+      <li><strong>Melhora a generalização:</strong> potencializa o desempenho do modelo tanto em contextos zero-shot quanto few-shot, facilitando o alinhamento com tarefas pouco familiares.</li>
+    </ul>
+
+    <h3>Limitações</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Maior uso de tokens:</strong> gerar explicações passo a passo produz respostas mais longas, o que aumenta o custo computacional.</li>
+      <li><strong>Dependência da qualidade dos passos:</strong> a eficácia do CoT depende de passos de raciocínio bem estruturados; prompts de CoT mal elaborados podem levar a conclusões equivocadas.</li>
+      <li><strong>Utilidade limitada em tarefas simples:</strong> tarefas que não exigem raciocínio em múltiplas etapas podem não se beneficiar significativamente do CoT, sendo resolvidas de forma mais eficiente com respostas diretas.</li>
+    </ul>
+  </section>
+
+  <section id="react">
+    <h2>5. ReAct Prompting</h2>
+
+    <p><strong>ReAct</strong> é a abreviação de <em>Reasoning and Acting</em> ("Raciocínio e Ação"). É uma técnica de prompting que combina, dentro do próprio processo de geração da resposta do modelo, etapas de raciocínio — como as vistas no Chain-of-Thought — com a tomada de ações, isto é, a interação com ferramentas ou ambientes externos, incorporando o resultado dessas ações de volta ao raciocínio do modelo. Essa abordagem interativa permite que o modelo resolva problemas mais complexos, busque informações adicionais e adapte seu raciocínio com base em feedback obtido em tempo real, o que costuma resultar em soluções mais precisas e robustas em tarefas que exigem interação dinâmica e aquisição de conhecimento.</p>
+
+    <h3>Como funciona</h3>
+    <p>O ReAct prompting funciona por meio de um ciclo com quatro etapas principais (Figura 1). Na etapa de <strong>Raciocínio</strong>, o modelo gera passos de análise sobre o problema e formula um plano de ação. Na etapa de <strong>Ação</strong>, o modelo age de acordo com esse raciocínio — por exemplo, consultando uma base de conhecimento, fazendo uma busca em um mecanismo de pesquisa ou utilizando alguma outra ferramenta externa. Na etapa de <strong>Observação</strong>, o modelo observa o resultado ou o retorno obtido a partir dessa ação. Por fim, na etapa de <strong>Atualização do raciocínio</strong>, o modelo revisa seu raciocínio com base nas observações feitas, podendo ajustar seu plano ou realizar novas ações até resolver o problema.</p>
+
+    <figure class="figura-central">
+      <img src="react_fluxo.png" alt="" style="width: 400px; height: auto;">
+      <figcaption><p class="legenda-exemplo">Figura1: Ciclo do ReAct prompting.</p>
+      </figcaption>
+    </figure>
+
+    <h3>Exemplos</h3>
+
+    <p>O exemplo a seguir é baseado no <a href="https://huggingface.co/datasets/hotpotqa/hotpot_qa" target="_blank" rel="noopener">HotpotQA</a>, um conjunto de dados de perguntas e respostas que exige raciocínio em múltiplos saltos — ou seja, a resposta não está disponível em uma única fonte, sendo necessário combinar mais de uma informação para chegar a ela.</p>
+
+    <p><strong>Prompt enviado ao modelo:</strong></p>
+    <div class="exemplo">Resolva a pergunta a seguir alternando entre Raciocínio, Ação e Observação, até chegar a uma resposta final.
+
+Pergunta: Qual hotel sedia o espetáculo "Mystère", do Cirque du Soleil, e quantos quartos ele tem?</div>
+
+    <p><strong>Passo a passo do agente e resposta final:</strong></p>
+    <div class="exemplo">Raciocínio 1: Preciso primeiro descobrir qual hotel sedia o espetáculo "Mystère", do Cirque du Soleil, e depois descobrir o número de quartos desse hotel.
+Ação 1: Pesquisar por "Cirque du Soleil Mystère show".
+Observação 1: O espetáculo "Mystère" é sediado no Treasure Island Hotel and Casino, em Las Vegas.
+
+Raciocínio 2: Agora que sei qual é o hotel, preciso descobrir quantos quartos o Treasure Island Hotel and Casino tem.
+Ação 2: Pesquisar por "Treasure Island Hotel and Casino number of rooms".
+Observação 2: O Treasure Island Hotel and Casino tem 2.884 quartos.
+
+Raciocínio 3: Portanto, o Treasure Island Hotel and Casino sedia o espetáculo "Mystère" e tem 2.884 quartos.
+Ação 3 (final): Finalizar: o Treasure Island Hotel and Casino sedia o espetáculo do Cirque du Soleil "Mystère" e tem 2.884 quartos.</div>
+    <p class="legenda-exemplo">Exemplo 12 — Pergunta e resposta em múltiplos saltos por ReAct (HotpotQA): o modelo alterna entre raciocinar sobre o que ainda precisa descobrir e agir para buscar essa informação, usando cada observação para planejar o próximo passo, até reunir todos os dados necessários para responder à pergunta original.</p>
+
+    <h3>Vantagens</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Resolução dinâmica de problemas:</strong> permite que o modelo lide com tarefas que exigem interação e adaptação contínuas.</li>
+      <li><strong>Aquisição de conhecimento:</strong> possibilita obter e utilizar informações em tempo real a partir de fontes externas.</li>
+      <li><strong>Maior precisão:</strong> incorpora feedback e observações reais ao processo de geração da resposta, tornando-a mais precisa.</li>
+      <li><strong>Explicabilidade:</strong> revela tanto o raciocínio quanto as ações do modelo, tornando seu processo de decisão mais transparente.</li>
+    </ul>
+
+    <h3>Limitações</h3>
+    <ul class="lista-tecnica">
+      <li><strong>Complexidade de implementação:</strong> colocar o ReAct em prática exige integração com ferramentas e ambientes externos, o que aumenta a complexidade do sistema.</li>
+      <li><strong>Custo computacional:</strong> executar ações e observar seus resultados pode ser custoso e aumentar o tempo de resposta.</li>
+      <li><strong>Preocupações de segurança:</strong> permitir que o modelo interaja com ambientes externos cria o risco de ações não intencionais ou potencialmente prejudiciais.</li>
+    </ul>
+  </section>
+
+  <section id="referencias">
+    <h2>6. Referências</h2>
+    <ul>
+      <li>
+        DEBNATH, T.; SIDDIKY, M. N. A.; RAHMAN, M. E.; DAS, P.; GUHA, A. K.;
+        RAHMAN, M. R.; KABIR, H. M. D. <strong>A comprehensive survey of prompt engineering and context engineering techniques in large language models</strong>. Computer Science Review, v. 62, art. 100979, 2026. DOI: 10.1016/j.cosrev.2026.100979. Disponível em: <a href="https://www.sciencedirect.com/science/article/pii/S1574013726000870" target="_blank" rel="noopener">https://www.sciencedirect.com/science/article/pii/S1574013726000870</a>. Acesso em: 17 ago. 2026.
+      </li>
+      <li>
+        WEI, J.; WANG, X.; SCHUURMANS, D.; BOSMA, M.; XIA, F.; CHI, E.; LE, Q. V.;
+        ZHOU, D. et al. <strong>Chain-of-thought prompting elicits reasoning in large language models</strong>. Advances in Neural Information Processing Systems, v. 35, p. 24824–24837, 2022.
+      </li>
+      <li>
+        BOONSTRA, Lee. <strong>Prompt Engineering</strong>. Google, fev. 2025. Disponível em: 
+        <a href="https://www.kaggle.com/whitepaper-prompt-engineering" target="_blank" rel="noopener">https://www.kaggle.com/whitepaper-prompt-engineering</a>. Acesso em: 23 ago. 2026. <em>(fonte dos Exemplos 9, 10 e 11 desta unidade, correspondentes às Tabelas 11, 12 e 13 do documento original)</em>
+      </li>
+      <li>
+        YAO, S.; ZHAO, J.; YU, D.; DU, N.; SHAFRAN, I.; NARASIMHAN, K. R.; CAO, Y.
+        <strong>ReAct: synergizing reasoning and acting in language models</strong>. In: The Eleventh International Conference on Learning Representations (ICLR), 2023. Disponível em: <a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener">https://arxiv.org/abs/2210.03629</a>. Acesso em: 17 ago. 2026.
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p>Material didático produzido para a disciplina Aplicações de Modelos de Linguagem Natural — Unidade 2.</p>
+  <p>Este material foi gerado por IA (tradução e redação didática). Todo o conteúdo foi extraído integralmente dos artigos listados nas referências, selecionados e revisados pela professora da disciplina.</p>
+</footer>
+
+<script>
+  (function () {
+    var botao = document.getElementById('botao-menu');
+    var menu = document.getElementById('menu-secoes');
+    var overlay = document.getElementById('overlay');
+
+    function abrirMenu() {
+      menu.classList.add('aberto');
+      overlay.classList.add('aberto');
+      botao.classList.add('aberto');
+      botao.setAttribute('aria-expanded', 'true');
+    }
+
+    function fecharMenu() {
+      menu.classList.remove('aberto');
+      overlay.classList.remove('aberto');
+      botao.classList.remove('aberto');
+      botao.setAttribute('aria-expanded', 'false');
+    }
+
+    botao.addEventListener('click', function () {
+      if (menu.classList.contains('aberto')) {
+        fecharMenu();
+      } else {
+        abrirMenu();
+      }
+    });
+
+    overlay.addEventListener('click', fecharMenu);
+
+    var linksMenu = menu.querySelectorAll('a');
+    for (var i = 0; i < linksMenu.length; i++) {
+      linksMenu[i].addEventListener('click', fecharMenu);
+    }
+
+    document.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape') {
+        fecharMenu();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
