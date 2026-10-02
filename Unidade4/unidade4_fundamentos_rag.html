@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unidade 4 — Fundamentos de RAG</title>
+<style>
+  :root {
+    --texto: #1f2328;
+    --texto-suave: #4b5157;
+    --linha: #e3e5e8;
+    --acento: #2f5fa3;
+    --fundo-code: #f5f6f8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: var(--texto);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ---------- Cabeçalho fixo com menu sanduíche ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--linha);
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    z-index: 100;
+  }
+
+  .menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .menu-btn span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background-color: var(--texto);
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .menu-btn.aberto span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.aberto span:nth-child(2) { opacity: 0; }
+  .menu-btn.aberto span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  header .titulo-curto {
+    margin-left: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--texto-suave);
+    font-weight: 600;
+  }
+
+  /* ---------- Painel de navegação (escondido por padrão) ---------- */
+  nav#menu-secoes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    max-width: 80vw;
+    background-color: #ffffff;
+    border-right: 1px solid var(--linha);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+    padding: 4.5rem 1.5rem 1.5rem 1.5rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 99;
+    overflow-y: auto;
+  }
+
+  nav#menu-secoes.aberto {
+    transform: translateX(0);
+  }
+
+  nav#menu-secoes h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--texto-suave);
+    margin: 0 0 1rem 0;
+  }
+
+  nav#menu-secoes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav#menu-secoes li {
+    margin-bottom: 0.35rem;
+  }
+
+  nav#menu-secoes a {
+    display: block;
+    padding: 0.5rem 0.6rem;
+    color: var(--texto);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  nav#menu-secoes a:hover {
+    background-color: var(--fundo-code);
+    color: var(--acento);
+  }
+
+  nav#menu-secoes ul ul {
+    margin-left: 0.9rem;
+    margin-top: 0.25rem;
+  }
+
+  nav#menu-secoes ul ul a {
+    font-size: 0.88rem;
+    color: var(--texto-suave);
+  }
+
+  /* fundo escurecido quando o menu está aberto */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 98;
+  }
+
+  #overlay.aberto {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ---------- Conteúdo ---------- */
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem 1.5rem;
+  }
+
+  main h1 {
+    font-size: 1.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitulo {
+    color: var(--texto-suave);
+    margin-top: 0;
+    margin-bottom: 2.5rem;
+    font-size: 1rem;
+  }
+
+  section {
+    margin-bottom: 3rem;
+    scroll-margin-top: 5rem;
+  }
+
+  section h2 {
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--linha);
+    padding-bottom: 0.4rem;
+    margin-bottom: 1.1rem;
+    color: var(--texto);
+  }
+
+  section h3 {
+    font-size: 1.15rem;
+    margin-top: 1.8rem;
+    margin-bottom: 0.7rem;
+    color: var(--texto);
+  }
+
+  section h4 {
+    font-size: 1.02rem;
+    margin-top: 1.4rem;
+    margin-bottom: 0.5rem;
+    color: var(--acento);
+  }
+
+  p { margin: 0 0 1rem 0; }
+
+  ul.lista-tecnica {
+    margin: 0 0 1rem 0;
+    padding-left: 1.2rem;
+  }
+
+  ul.lista-tecnica li {
+    margin-bottom: 0.6rem;
+  }
+
+  ol.lista-tecnica {
+    margin: 0 0 1rem 0;
+    padding-left: 1.2rem;
+  }
+
+  ol.lista-tecnica li {
+    margin-bottom: 0.6rem;
+  }
+
+  .exemplo {
+    background-color: var(--fundo-code);
+    border-left: 3px solid var(--acento);
+    border-radius: 4px;
+    padding: 0.8rem 1rem;
+    margin: 0.8rem 0 1.2rem 0;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.92rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
+  .legenda-exemplo {
+    font-size: 0.85rem;
+    color: var(--texto-suave);
+    margin-top: -0.9rem;
+    margin-bottom: 1.2rem;
+    font-style: italic;
+  }
+
+  .figura-central {
+    margin: 1.5rem auto;
+    text-align: center;
+  }
+
+  .figura-central img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  .figura-central figcaption {
+    margin-top: 0.5rem;
+  }
+
+  .figuras-lado-a-lado {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .figuras-lado-a-lado figure {
+    flex: 1 1 200px;
+    max-width: 31%;
+    margin: 0;
+    text-align: center;
+  }
+
+  .figuras-lado-a-lado img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  .figuras-lado-a-lado figcaption {
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .figuras-lado-a-lado figure {
+      max-width: 100%;
+    }
+  }
+
+  blockquote {
+    margin: 0 0 1rem 0;
+    padding: 0.6rem 1rem;
+    border-left: 3px solid #c9cdd2;
+    color: var(--texto-suave);
+    font-style: italic;
+  }
+
+  strong { color: var(--texto); }
+
+  #referencias ul {
+    padding-left: 1.2rem;
+  }
+
+  #referencias li {
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--texto-suave);
+    font-size: 0.85rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--linha);
+  }
+
+  footer p {
+    margin: 0 0 0.4rem 0;
+  }
+
+  footer p:last-child {
+    margin-bottom: 0;
+  }
+
+  code {
+    background-color: var(--fundo-code);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" id="botao-menu" aria-label="Abrir menu de seções" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="titulo-curto">Unidade 4 — Fundamentos de RAG</span>
+</header>
+
+<div id="overlay"></div>
+
+<nav id="menu-secoes" aria-label="Navegação por seções">
+  <h2>Seções</h2>
+  <ul>
+    <li><a href="#introducao">1. Introdução</a></li>
+    <li><a href="#rag">2. Geração Aumentada por Recuperação (RAG)</a></li>
+    <li><a href="#pipeline-rag">2.1 O pipeline RAG</a></li>
+    <li>
+      <a href="#banco-vetorial">3. Banco de Dados Vetoriais</a>
+      <ul>
+        <li><a href="#o-que-e-bd-vetorial">3.1 O que é um Banco de Dados Vetorial</a></li>
+        <li><a href="#divisao-documentos">3.2 Divisão de Documentos (Chunking)</a></li>
+        <li><a href="#embeddings">3.3 Embeddings</a></li>
+        <li><a href="#armazenamento-dados">3.4 Armazenamento dos Dados</a></li>
+        <li><a href="#recuperacao-dados">3.5 Recuperação de Dados</a></li>
+      </ul>
+    </li>
+    <li><a href="#referencias">4. Referências</a></li>
+  </ul>
+</nav>
+
+<main>
+  <h1>Unidade 4 — Fundamentos de RAG</h1>
+  <p class="subtitulo">Disciplina: Aplicações de Modelos de Linguagem Natural</p>
+
+  <!-- <section id="introducao">
+    <h2>1. Introdução</h2>
+
+    <p>Nas Unidades 1 a 3, aprendemos a trabalhar com prompts sob três ângulos diferentes: primeiro, entendemos o que é
+      um prompt, como ele pode ser estruturado em um prompt template e qual vocabulário a comunidade usa para
+      descrevê-lo; em seguida, vimos técnicas concretas (zero-shot, few-shot, Chain-of-Thought e ReAct) capazes de
+      melhorar a qualidade e o raciocínio das respostas geradas por um LLM; por fim, olhamos para o lado mais delicado
+      desse mesmo mecanismo, estudando os ataques de injeção de prompt e as frentes de proteção propostas para
+      mitigá-los. Em todos esses casos, o foco estava na entrada do modelo: como escrevê-la, aprimorá-la e protegê-la.</p>
+
+    <p>Nesta unidade, o foco muda. Em vez de olhar apenas para o que escrevemos no prompt, vamos conhecer uma técnica
+      que muda a própria forma como o LLM acessa informação: a <strong>Geração Aumentada por Recuperação</strong>
+      (Retrieval-Augmented Generation, RAG). Vamos entender por que os LLMs, sozinhos, têm limitações importantes de
+      acesso a conhecimento, como o RAG resolve parte desse problema combinando o modelo com uma base de dados externa,
+      e como funciona o pipeline de recuperação, aumento e geração que dá nome à técnica. Na segunda metade da unidade,
+      entramos em um dos componentes centrais dessa arquitetura: os bancos de dados vetoriais, que armazenam a
+      informação externa de um jeito que o LLM consegue consultar de forma eficiente. A implementação prática completa
+      de um pipeline RAG, já com código, é o tema da Unidade 5. Aqui, o objetivo é entender os fundamentos conceituais
+      que tornam essa técnica possível.</p>
+  </section> -->
+
+  <section id="introducao">
+    <!-- <h2>2. Limitações dos LLMs</h2> -->
+     <h2>1. Introdução</h2>
+
+    <p>A necessidade de acessar informação é um aspecto fundamental da atividade humana, e as empresas são
+      particularmente afetadas por isso: elas têm grandes volumes de dados disponíveis, e seus funcionários precisam
+      acessá-los. Infelizmente, os sistemas de busca corporativos atuais não atendem bem a essa necessidade.</p>
+
+
+
+    <p>Agentes conversacionais baseados em LLMs revolucionaram a forma de acessar informação, oferecendo duas
+      vantagens em relação aos sistemas corporativos tradicionais: primeiro, permitem que o usuário faça perguntas em
+      linguagem natural e receba respostas igualmente conversacionais; segundo, são cada vez mais capazes de lidar com
+      tarefas de busca complexas, facilitando a resolução de problemas e a tomada de decisão. Por exemplo, pessoas já
+      usam agentes conversacionais para obter receitas culinárias, resolver tarefas de química e problemas de
+      geometria.</p>
+
+    <p>Nas organizações, a necessidade de informação costuma estar relacionada a dados internos que normalmente não
+      estão disponíveis na internet, por exemplo, um resumo de uma análise de requisitos ou detalhes de um contrato.
+      Como é pouco provável que um LLM "puro" (sem nenhum tipo de adaptação) tenha usado esses dados específicos
+      durante seu treinamento, as respostas geradas para esse tipo de pergunta tendem a ser pouco confiáveis. De forma
+      mais geral, os LLMs às vezes geram respostas sem nenhuma base factual, um fenômeno chamado de
+      <strong>alucinação</strong>.</p>
+
+    <div class="exemplo">Alucinação: "conteúdo que é inconsistente com fatos do mundo real ou com as entradas fornecidas pelo usuário" (Ji et al., 2023).</div>
+    <!-- <p class="legenda-exemplo">Definição de alucinação citada na fonte principal.</p> -->
+
+    <!-- <p>As alucinações são particularmente críticas porque comprometem a confiabilidade dos resultados, e já foram
+      observadas em diversos cenários, como no uso multilíngue de LLMs e em contextos específicos, como a medicina.</p> -->
+
+    <p>A <strong>Geração Aumentada por Recuperação</strong> (Retrieval-Augmented Generation, RAG) foi proposta como um
+      novo framework de IA que busca integrar conhecimento adicional, como dados organizacionais, e gerar respostas
+      que possam ser vinculadas a esse conhecimento. Isso permite que os usuários acessem informações internas da
+      organização e reduz o risco de alucinações. Essa nova arquitetura representa um avanço importante em relação às
+      arquiteturas anteriores.</p>
+  </section>
+
+  <!-- <section id="pipeline-rag">
+    <h2>3. A Solução RAG</h2>
+  
+  </section> -->
+
+  <section id="rag">
+    <h2>2. Geração Aumentada por Recuperação (RAG)</h2>
+
+    <p>A ideia central do RAG é combinar a capacidade generativa dos LLMs com conhecimento externo recuperado de uma
+      base de dados separada (por exemplo, uma base de dados organizacional). Lewis et al. (2020) cunharam o termo
+      "Retrieval-Augmented Generation (RAG)" e propuseram um framework geral que combina a força da
+      <strong>memória paramétrica</strong> pré-treinada (o próprio LLM) com uma <strong>memória não paramétrica</strong>
+      (uma base de dados separada), como uma nova forma de melhorar o desempenho em tarefas que exigem muito
+      conhecimento.</p>
+
+    <ul class="lista-tecnica">
+      <li><strong>Memória paramétrica:</strong> é a informação armazenada nos parâmetros de um modelo. Em vez de
+        armazenar diretamente dados prontos e significativos, a memória paramétrica guarda parâmetros do modelo que
+        podem ser usados posteriormente para regenerar informação. Quanto mais parâmetros um modelo tem, mais
+        informação ele consegue representar fielmente, por isso os modelos atuais costumam incluir o número de
+        parâmetros no próprio nome (por exemplo, o Mistral 7B tem sete bilhões de parâmetros). É importante notar que
+        a memória paramétrica só contém informação que foi fornecida durante o treinamento.</li>
+      <li><strong>Memória não paramétrica (ou memória externa):</strong> é informação que fica fora do modelo, por
+        exemplo, informação vinda de uma base de dados. Por isso, essa informação é independente das limitações do
+        modelo. Em outras palavras, a memória não paramétrica permite integrar conhecimento que não foi
+        usado durante o processo de treinamento, por exemplo, usar documentos de política interna de uma empresa
+        para melhorar o desempenho de um sistema de perguntas frequentes (FAQ).</li>
+    </ul>
+
+    <p>Para entender melhor o RAG, é útil compará-lo com outras duas formas de adaptar um LLM a um contexto
+      específico (Figura 1):</p>
+
+    <figure class="figura-central">
+      <img src="RAG1.png" alt="Comparação entre modelo de fundação, ajuste fino e RAG" style="width: 550px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 1: comparação entre as três abordagens para incorporar conhecimento a um LLM — modelo de fundação, ajuste fino (fine-tuning) e RAG.</figcaption>
+    </figure>
+
+    <ol class="lista-tecnica">
+      <li><strong>Modelo de fundação (foundation model):</strong> todos os dados de treinamento resultam em um LLM e
+        passam a fazer parte do modelo paramétrico. Em geral, os modelos são treinados com enormes corpora de texto
+        da internet. A criação e o treinamento de um modelo de fundação exigem recursos e infraestrutura massivos, o
+        que só é viável para organizações muito grandes mas, uma vez criados, muitos desses modelos ficam
+        disponíveis como serviço para qualquer pessoa usar. Modelos de fundação são bem equipados para uma ampla
+        variedade de aplicações que não dependem de dados organizacionais ou privados.</li>
+      <li><strong>Ajuste fino do LLM (fine-tuning):</strong> dados adicionais e específicos de um domínio (como
+        documentos internos de uma empresa) são usados para atualizar os parâmetros do LLM, o que melhora seu
+        desempenho para as tarefas e o domínio específicos em questão. O ajuste fino é menos custoso e exige menos
+        recursos do que treinar um modelo de fundação do zero, o que permite que organizações menores e até
+        indivíduos ajustem modelos de fundação para um contexto específico, por exemplo, treinar um modelo capaz de
+        responder perguntas específicas do domínio da agricultura.</li>
+      <li><strong>RAG:</strong> uma base de dados separada, com informação vetorial (embeddings), é criada a partir
+        de um modelo de embeddings e de dados contextuais. Essa parte separada é a memória não paramétrica. Esse
+        banco de dados vetorial é usado para "aumentar" a entrada do LLM e assim melhorar seu resultado. Criar um
+        banco de dados vetorial é ainda menos custoso, em termos de recursos, do que fazer um ajuste fino. Por isso,
+        com capacidade tecnológica suficiente, essa abordagem é viável para muitas organizações.</li>
+    </ol>
+
+    <div class="exemplo">Modelo de Fundação → todos os dados de treinamento viram parte do LLM (memória paramétrica).
+Ajuste Fino (Fine-Tuning) → dados adicionais do domínio atualizam os parâmetros do LLM já existente.
+RAG → um banco de dados vetorial separado (memória não paramétrica) é criado e usado para complementar o LLM, sem alterar seus parâmetros.</div>
+    <p class="legenda-exemplo">Comparação entre as três formas de incorporar conhecimento a um LLM: modelo de fundação, ajuste fino (fine-tuning) e RAG.</p>
+
+    <section id="pipeline-rag">
+    <h3>2.1 O pipeline RAG</h3>
+
+    <p>O uso de uma arquitetura RAG resulta em um <strong>pipeline</strong> (Figura 2) que começa com uma consulta (query) do
+      usuário e termina com um resultado. Entre esses dois pontos, existem três partes fundamentais:
+      <strong>recuperação (retrieval)</strong>, <strong>aumento (augmentation)</strong> e <strong>geração
+      (generation)</strong>. É importante notar que o aumento é a saída do recuperador (retriever) e, ao mesmo tempo,
+      a entrada do gerador (generator).</p>
+
+    <figure class="figura-central">
+      <img src="RAG2.png" alt="Pipeline RAG básico" style="width: 700px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 2: um pipeline RAG básico ("vanilla"), baseado em Lewis et al. (2020): consulta → recuperador (usando o banco de dados vetorial e o modelo de embeddings) → contexto → aumento (template) → gerador → resultado.</figcaption>
+    </figure>
+
+    <ul class="lista-tecnica">
+      <li><strong>Modelo de embeddings:</strong> traduz dados de diferentes modalidades (texto, áudio, imagem
+        ou vídeo) em um vetor numérico. É essencial que o mesmo modelo de embeddings usado para criar o banco de
+        dados vetorial seja também usado para transformar a consulta do usuário em vetor, já que a similaridade
+        entre a consulta e os documentos (ou blocos de texto) da base é medida usando justamente esses vetores.</li>
+      <li><strong>Recuperador (retriever):</strong> busca a informação mais relevante no banco de dados vetorial,
+        calculando um escore de similaridade entre o vetor da consulta de entrada e os vetores dos documentos
+        armazenados. Como resultado, o recuperador sugere um contexto, que normalmente é uma lista de blocos de
+        texto (chunks) ou documentos recuperados. Na prática mais comum, são selecionados os "top k" resultados (por
+        exemplo, os 5 mais relevantes), ordenados pelo escore de similaridade, uma abordagem também chamada de
+        "princípio de ranqueamento por probabilidade". Por exemplo, se a consulta menciona um cliente específico, os
+        documentos mais relevantes relacionados a esse cliente são incluídos no contexto.</li>
+      <li><strong>Aumento (augmentation):</strong> o contexto recuperado é usado para gerar uma consulta estendida.
+        Para isso, os LLMs utilizam um tipo de modelo (template) de aumento que define como a consulta original do
+        usuário deve ser combinada com o contexto. Um exemplo simples de modelo de aumento seria instruir o modelo
+        da seguinte forma: "Use o seguinte contexto: [contexto]. Dado o contexto fornecido, responda à pergunta:
+        [pergunta]." A parte [contexto] pode incluir ainda links para os documentos mais relevantes encontrados no
+        banco de dados vetorial.</li>
+      <li><strong>Gerador (generator):</strong> recebe a consulta já "aumentada" com a informação vinda do banco de
+        dados e gera um novo resultado. Esse processo de geração também pode aproveitar a informação do contexto
+        para fornecer, junto com a resposta, um link para o documento original (por exemplo, um hiperlink para o
+        documento-fonte).</li>
+    </ul>
+
+    <div class="exemplo">Consulta do usuário → Recuperação (busca no banco de dados vetorial pelos blocos de texto mais relevantes) → Aumento (a consulta original é combinada com o contexto recuperado, usando um modelo de aumento) → Geração (o LLM produz a resposta final com base na consulta aumentada) → Resultado</div>
+    <p class="legenda-exemplo">As três etapas fundamentais do pipeline RAG: recuperação, aumento e geração.</p>
+    </section>
+
+  </section>
+
+  <section id="banco-vetorial">
+    <h2>3. Banco de Dados Vetoriais</h2>
+
+    <p>Vimos que o funcionamento do RAG depende diretamente de uma base de dados separada, capaz de armazenar
+      conhecimento externo e de ser consultada de forma eficiente pelo recuperador. Essa base é o banco de dados
+      vetorial. Esta seção é dividida em cinco partes: o que é um banco de dados vetorial, como os
+      documentos são divididos em blocos antes de entrar nele, como esses blocos viram vetores (embeddings), como
+      esses dados são armazenados e, por fim, como são recuperados quando uma consulta chega.</p>
+
+    <section id="o-que-e-bd-vetorial">
+      <h3>3.1 O que é um Banco de Dados Vetorial</h3>
+
+      <p>Bancos de dados tradicionais são capazes de armazenar e recuperar
+        dados estruturados, como tabelas com colunas e linhas bem definidas. Mas isso não reflete a grande
+        variedade de formatos de dados encontrados no dia a dia: além de texto, também há imagens, arquivos de
+        áudio e vídeos (Figura 3). Todos esses formatos diferentes precisam ser tratados de forma parecida e armazenados em um
+        mesmo tipo de banco de dados, algo que os bancos de dados tradicionais não fazem bem. Esse é o motivo pelo
+        qual surgiu um novo paradigma: o <strong>banco de dados vetorial</strong>.</p>
+
+      <figure class="figura-central">
+        <img src="BD1.png" alt="Dados estruturados e não estruturados" style="width: 550px; max-width: 100%; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 3: bancos de dados tradicionais lidam bem com dados estruturados (como tabelas SQL), enquanto boa parte dos dados típicos da internet — textos, imagens, vídeos, áudios — é não estruturada.</figcaption>
+      </figure>
+
+      <p>Por que esse novo tipo de banco de dados é chamado de "vetorial"? Porque todos os tipos de dado podem ser
+        representados como vetores. Relembrando a matemática básica: um vetor é uma linha com uma seta, desenhada em
+        um sistema de coordenadas, que pode ser representada por um conjunto de números.</p>
+
+      <p>Um exemplo simples: imagine um gráfico bidimensional (Figura 4) que representa seres vivos de acordo com duas
+        características: o número de pernas e o tamanho do corpo. Ao representar a informação dessa forma, é
+        possível perceber o significado semântico dos conceitos: gatos e cachorros, por exemplo, ficam bem próximos
+        nesse espaço, porque têm características parecidas em relação a essas duas dimensões.</p>
+
+      <figure class="figura-central">
+        <img src="BD2.png" alt="Exemplo de espaço vetorial com animais" style="width: 600px; max-width: 100%; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 4: exemplo de espaço vetorial bidimensional. Note como gato e cachorro, ou cobra e caracol, ficam próximos entre si — pares de conceitos com características semelhantes segundo as dimensões escolhidas.</figcaption>
+      </figure>
+
+      <div class="exemplo">
+      Cachorro → [4, 1]
+      Gato → [4, 0.5]
+      Ser humano → [4, 2]
+      Elefante → [4, 3]
+      Cobra → [0, 0.5]
+      Caracol → [0, 0.1]
+      </div>
+      <p class="legenda-exemplo">Exemplo de mapeamento de conceitos (número de pernas, tamanho do corpo) para vetores numéricos — o chamado embedding vector.</p>
+
+
+
+      <p>Como seres humanos, conseguimos imaginar um ponto em um espaço bidimensional ou até tridimensional, como no
+        exemplo acima. Mas não conseguimos imaginar um espaço de 768 ou 3.072 dimensões — que é justamente o
+        tamanho típico dos vetores gerados por modelos de embeddings atuais. Computadores, sim, conseguem lidar com
+        esses espaços de altíssima dimensão, o que permite representar o significado semântico de palavras, imagens,
+        sons ou qualquer outro tipo de informação de forma muito mais rica. O aspecto fundamental é que
+        <strong>conceitos semanticamente parecidos ficam posicionados mais próximos entre si do que conceitos muito
+        diferentes</strong>, e, quanto mais dimensões um algoritmo tem à disposição, melhor tende a ser sua
+        compreensão do significado de uma palavra ou texto.</p>
+
+      <p>Usamos línguas como o português ou o inglês para nos comunicar, mas os computadores não trabalham
+        diretamente com essas línguas e sim com o equivalente numérico delas: os chamados <strong>vetores
+        de embedding</strong>. O processo de traduzir textos legíveis por humanos em vetores é chamado de
+        <strong>embedding</strong>, que é uma das etapas do processo de ingestão de dados em um banco de dados
+        vetorial.</p>
+
+      <p>De forma resumida, sempre que se deseja adicionar dados a um banco de dados vetorial, passa-se por quatro
+        etapas: <strong>carregamento dos dados</strong> (a partir de uma fonte, como arquivos de texto, páginas web
+        ou outros documentos), <strong>divisão em blocos menores</strong> (chunking), <strong>criação dos
+        embeddings</strong> (tradução de cada bloco de texto em um vetor numérico) e, por fim,
+        <strong>armazenamento</strong> desses pares texto/vetor no banco de dados. As etapas divisão,
+        embeddings e armazenamento, além da recuperação dos dados já armazenados, são detalhadas nas subseções a
+        seguir.</p>
+
+      <figure class="figura-central">
+        <img src="BD3.png" alt="Pipeline de ingestão de dados em um banco de dados vetorial" style="width: 650px; max-width: 100%; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 5: pipeline de ingestão de dados em um banco de dados vetorial — fonte de dados, carregamento, divisão em blocos (chunking), geração dos embeddings e armazenamento.</figcaption>
+      </figure>
+    </section>
+
+    <section id="divisao-documentos">
+      <h3>3.2 Divisão de Documentos (Chunking)</h3>
+
+      <p>Frequentemente é necessário dividir um documento longo em blocos menores (chunks) antes de armazená-lo em
+        um banco de dados vetorial. Essa divisão é importante por três motivos principais: primeiro, blocos menores
+        tendem a conter informação mais focada e relevante, o que melhora a granularidade dos resultados de busca;
+        segundo, ela contorna limitações inerentes aos modelos de embeddings, que só conseguem processar uma
+        quantidade limitada de texto por vez; terceiro, trabalhar e armazenar blocos menores tende a ser mais
+        eficiente em termos de tamanho do banco de dados e de velocidade das consultas.</p>
+
+      <p>Para entender a segunda razão, é importante conhecer o conceito de <strong>token</strong>: um token é a
+        unidade fundamental de texto em processamento de linguagem natural, normalmente uma palavra inteira, parte
+        de uma palavra, ou até um único caractere. O processo de converter uma frase em uma lista de tokens é
+        chamado de <strong>tokenização</strong>. Por exemplo, a frase "Eu amo IA generativa!" poderia ser
+        tokenizada como ["Eu", "amo", "IA", "generativa", "!"]; em muitos métodos de tokenização, palavras mais
+        longas são quebradas em pedaços menores, por exemplo, "amando" poderia virar ["am", "ando"]. Os tokens
+        permitem que os modelos de IA processem texto convertendo linguagem em representações numéricas; em
+        seguida, na etapa de embedding, esses tokens são transformados em vetores que capturam o significado
+        semântico. Como regra geral, um token equivale a aproximadamente 0,75 palavra (ou seja, 100 tokens
+        correspondem a cerca de 75 palavras, em inglês). Todo modelo de embeddings tem um limite máximo de tokens
+        que consegue processar de uma vez. Esse limite é chamado de <strong>janela de contexto</strong> (context
+        window); se mais tokens do que esse limite forem enviados, o excesso é simplesmente descartado,
+        perdendo-se o significado dessa parte do texto.</p>
+
+      <div class="exemplo">OpenAI text-embedding-3-small: 8.191 tokens
+OpenAI text-embedding-3-large: 8.191 tokens
+Anthropic voyage-3-large: 32.000 tokens
+All-MiniLM-L6-v2: 256 tokens</div>
+      <p class="legenda-exemplo">Exemplos de janelas de contexto (limite máximo de tokens) de alguns modelos de embeddings populares.</p>
+
+      <p>Existem diferentes abordagens para criar os blocos de texto (chunks). A seguir, apresentamos três das mais
+        utilizadas (Figura 6).</p>
+
+      <figure class="figura-central">
+        <img src="BD4.png" alt="Comparação entre estratégias de divisão de documentos" style="width: 650px; max-width: 100%; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 6: comparação entre as três estratégias de divisão de documentos: divisão de tamanho fixo (com sobreposição entre blocos), divisão baseada na estrutura do texto e divisão semântica (baseada na similaridade entre frases).</figcaption>
+      </figure>
+
+      <p><strong>Divisão de tamanho fixo (fixed-size chunking):</strong> a abordagem mais simples. O texto é
+        dividido sempre que um número predefinido de caracteres é atingido, com o corte ocorrendo no final da
+        última palavra completa antes de ultrapassar esse limite. A principal vantagem dessa abordagem é a
+        simplicidade, é fácil de entender, de implementar e é rápida, já que não exige nenhuma análise do
+        significado do texto. A principal desvantagem é a falta de sensibilidade ao contexto: frases ou ideias
+        podem ser cortadas no meio, resultando em perda de coerência semântica.</p>
+
+      <p>Um recurso importante nessa e em outras abordagens é a <strong>sobreposição entre blocos</strong> (chunk
+        overlap): a quantidade de texto compartilhada entre dois blocos consecutivos, normalmente medida em
+        caracteres ou tokens. O objetivo da sobreposição é manter o contexto entre os blocos e preservar o
+        significado que, de outra forma, poderia se perder quando o texto é dividido de forma arbitrária. Uma regra
+        geral comum é usar uma sobreposição de 10% a 20% do tamanho do bloco. Embora isso não seja uma regra fixa:
+        dependendo do tipo de texto, mais ou menos sobreposição pode ser adequada.</p>
+
+      <p><strong>Divisão baseada na estrutura do documento (structure-based chunking):</strong> o significado e a
+        coerência de um texto normalmente não seguem tamanhos fixos, então dividir o texto em pedaços de tamanho
+        igual nem sempre reflete bem a realidade. Uma abordagem mais sofisticada é seguir a própria estrutura do
+        documento, que costuma ser organizado pelo autor em capítulos, parágrafos, frases, partes de frases,
+        palavras, e assim por diante. A ideia é quebrar primeiro o texto em unidades maiores, como capítulos; se o
+        bloco resultante ainda for grande demais, ele é quebrado em unidades menores, como parágrafos, e assim
+        sucessivamente, até respeitar o limite de tamanho definido. Esse tipo de abordagem consegue equilibrar bem
+        a coerência textual com o cumprimento dos limites de tamanho dos blocos.</p>
+
+      <div class="exemplo">Um histórico de conversa entre duas pessoas ilustra bem a importância dessa abordagem: se os blocos de texto de duas pessoas diferentes ficassem misturados por causa de uma divisão mal feita, a compreensão da conversa ficaria prejudicada, como ler um livro em que as falas fossem atribuídas às pessoas erradas.</div>
+      <p class="legenda-exemplo">Exemplo que ilustra por que respeitar a estrutura do texto (e não apenas um tamanho fixo) 
+        é importante ao dividir documentos em blocos.</p>
+
+      <p><strong>Divisão semântica (semantic chunking):</strong> a abordagem mais avançada das três. Primeiro, o
+        texto é dividido em frases individuais; em seguida, cada frase é transformada em um vetor de embedding. A
+        partir desses vetores, calcula-se a similaridade entre frases consecutivas (por meio de uma espécie de
+        matriz de distâncias), e a divisão em blocos é feita justamente nos pontos em que essa similaridade cai de
+        forma expressiva, ou seja, nas "quebras naturais" de assunto dentro do texto. Essa abordagem preserva
+        melhor o significado semântico das frases e mantém conceitos relacionados agrupados no mesmo bloco, o que
+        melhora a qualidade da recuperação de informação; além disso, ela se adapta ao conteúdo do texto, produzindo
+        blocos de tamanhos mais naturais e mais fáceis de entender. Por outro lado, essa abordagem também tem
+        desvantagens: ela exige processamento computacional adicional (é mais lenta), já que depende de rodar um
+        modelo de embeddings sobre o texto, o que tem um custo, seja em tempo de resposta (latência), seja
+        financeiro, seja em complexidade adicional do sistema.</p>
+
+    
+    </section>
+
+    <section id="embeddings">
+      <h3>3.3 Embeddings</h3>
+
+      <p>Depois de carregar e dividir os documentos em blocos, ainda estamos lidando apenas com texto legível por
+        humanos. É preciso traduzir esse texto para uma representação compreensível por máquina (<strong>embedding</strong>). 
+        Nesse processo é chamado cada bloco de texto (chunk) é convertido em um vetor numérico (Figura 7). Um embedding
+        não tem apenas duas ou três dimensões, como nos exemplos didáticos de espaço vetorial vistos anteriormente:
+        ele pode ter centenas ou até milhares de dimensões, o que é necessário para capturar todo o significado do
+        texto.
+      </p>
+
+      <figure class="figura-central">
+        <img src="BD5.png" alt="Processo de criação de embeddings" style="width: 550px; max-width: 100%; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 7: processo de embedding, cada bloco de texto (chunk) é passado por um 
+          modelo de embeddings e transformado em um vetor numérico de alta dimensão.</figcaption>
+      </figure>
+
+      <p>O conceito de embedding não se limita a textos. Também é possível gerar embeddings de outras modalidades
+        de dado: <strong>embeddings de imagem</strong> (imagens completas), <strong>embeddings de áudio</strong>
+        (sons, vozes, músicas), <strong>embeddings de vídeo</strong> (que combinam sinais de áudio com sequências
+        de imagens), <strong>embeddings de grafos</strong> (representando nós, arestas e características de um
+        grafo) e <strong>embeddings multimodais</strong>, em que diferentes modalidades, como texto e imagem,
+        são representadas em um mesmo espaço vetorial compartilhado (um exemplo é o modelo CLIP, da OpenAI, que
+        permite embutir simultaneamente imagens e os textos que as descrevem).</p>
+
+      <p>Os embeddings são centrais para a IA Generativa: eles são a base dos LLMs, e tudo o que é construído sobre
+        LLMs depende, em algum nível, deles. Além disso, modelos de processamento de linguagem natural usam
+        embeddings de texto; sistemas de visão computacional usam embeddings para representar o significado de
+        imagens; aplicações de RAG são construídas sobre busca semântica, que depende de embeddings para recuperar
+        de forma eficiente os blocos de texto mais relevantes; e sistemas de recomendação usam embeddings para
+        representar produtos e suas características.</p>
+
+      <p>Ao escolher um modelo de embeddings, alguns fatores importantes devem ser considerados: o desempenho do
+        modelo (existem rankings públicos, como o Massive Text Embedding Benchmark, que comparam dezenas
+        de modelos em diferentes tarefas e idiomas); o tamanho do modelo e o uso de memória (caso a intenção seja
+        hospedar o próprio modelo); o tamanho máximo de entrada aceito pelo modelo (é preciso garantir que o
+        tamanho dos blocos de texto fique dentro desse limite); e o custo, muitos modelos são oferecidos como
+        serviço pago via API, enquanto outros são de código aberto e gratuitos, embora hospedá-los localmente
+        exija manter um servidor (com custos de hardware e energia). A vantagem de hospedar o próprio modelo é
+        evitar que os dados da organização saiam de sua própria rede, o que pode ser importante em cenários com
+        restrições de privacidade.</p>
+
+      <p>Um conceito fundamental por trás dos modelos de embedding é que o <strong>significado de uma palavra é
+        definido pelo contexto em que ela é usada</strong>. Essa é a ideia central por trás do algoritmo
+        skip-gram, que deu origem ao Word2vec, um dos primeiros e mais influentes modelos de embedding de palavras
+        (desenvolvido pelo Google em 2013). Depois dele vieram outros modelos importantes: o GloVe (Universidade
+        de Stanford, 2014, com desempenho comparável ao Word2vec), o FastText (Facebook/Meta, 2016, capaz de lidar
+        até com palavras fora do vocabulário de treinamento) e o BERT (Google, 2018, baseado na arquitetura
+        Transformer), que continua sendo um dos modelos de embedding mais populares até hoje.</p>
+
+      <!-- <p>Um exemplo interessante da capacidade desses modelos é que eles conseguem capturar relações entre
+        conceitos por meio de operações vetoriais simples, como no caso a seguir:</p>
+
+      <div class="exemplo">Paris − França + Alemanha ≈ Berlim</div>
+      <p class="legenda-exemplo">Exemplo de "aritmética de embeddings": subtrair o vetor de "França" do vetor de "Paris" e somar o vetor de "Alemanha" resulta em um vetor muito próximo do vetor de "Berlim" — porque a relação vetorial entre uma capital e seu país se repete de forma consistente no espaço de embeddings.</p> -->
+
+      <p>Um embedding de palavra isolado, porém, tem uma limitação importante: o significado de uma palavra depende
+        do contexto da frase em que ela aparece. Considere as duas frases a seguir, que usam a mesma palavra com
+        sentidos completamente diferentes:</p>
+
+      <div class="exemplo">Frase 1: "Preciso ir ao banco depositar este cheque."
+Frase 2: "Fizemos um piquenique na margem (banco) do rio."</div>
+      <p class="legenda-exemplo">A palavra "banco" tem significados completamente diferentes nas duas frases,
+         o que mostra que um único embedding para essa palavra, isolado de qualquer contexto, não é suficiente.</p>
+
+      <p>Por isso, além dos embeddings de palavras isoladas, existem os <strong>embeddings de frases (sentence
+        embeddings)</strong>: em vez de gerar um vetor para cada palavra, o modelo recebe uma frase (ou até um
+        parágrafo) completo e devolve um único vetor que representa o significado da frase inteira. Modelos como
+        variantes do BERT são capazes de processar frases completas dessa forma. Um detalhe interessante é que
+        modelos de embeddings multilíngues conseguem representar o mesmo significado em diferentes idiomas de forma
+        muito próxima no espaço vetorial, ou seja, a mesma frase escrita em português, inglês ou francês tende a
+        gerar vetores muito parecidos entre si, mostrando que esses modelos capturam o significado, não apenas a
+        forma superficial das palavras.</p>
+
+      
+    </section>
+
+    <section id="armazenamento-dados">
+      <h3>3.4 Armazenamento dos Dados</h3>
+
+      <p>Depois de carregar os documentos, dividi-los em blocos e gerar os embeddings correspondentes, chega-se à
+        última etapa da ingestão de dados: armazenar esses pares (texto e vetor) em um banco de dados vetorial. A
+        principal decisão a tomar é se o banco de dados vetorial será hospedado localmente (na própria
+        infraestrutura da organização) ou se será utilizado um serviço de nuvem gerenciado por terceiros. Cada
+        abordagem tem vantagens e desvantagens.</p>
+
+      <p>Alguns critérios importantes para escolher um banco de dados vetorial:</p>
+
+      <ul class="lista-tecnica">
+        <li><strong>Localização:</strong> alguns bancos de dados vetoriais armazenam os dados localmente (por
+          exemplo, o Chroma, uma opção de código aberto que pode rodar na própria máquina), enquanto outros são
+          oferecidos como serviços de nuvem (por exemplo, Pinecone ou Weaviate).</li>
+        <li><strong>Proteção de dados:</strong> dependendo do tipo de dado e do cliente envolvido, os dados podem
+          ser altamente sensíveis, o que pode levar à necessidade de evitar serviços online ou determinadas
+          regiões geográficas. Nesses casos, um banco de dados vetorial local pode ser preferível a um serviço em
+          nuvem.</li>
+        <li><strong>Preço:</strong> embora bancos de dados vetoriais locais e de código aberto sejam gratuitos, é
+          necessário manter um servidor próprio, equipado com hardware adequado para gerar embeddings rapidamente
+          , ou seja, trocam-se custos variáveis (pagos a um serviço de nuvem) por custos fixos mais altos (manter
+          a própria infraestrutura).</li>
+        <li><strong>Desempenho versus velocidade:</strong> existe um equilíbrio clássico entre os dois, em geral,
+          melhor desempenho (qualidade dos resultados) está correlacionado a espaços de embedding maiores, o que
+          torna mais lentas tanto a inserção/atualização de dados quanto as consultas ao banco.</li>
+      </ul>
+
+      <!-- <p>Em sistemas de produção que atendem a vários clientes diferentes ao mesmo tempo (multitenancy), é
+        importante garantir que os dados de um cliente não sejam acessados acidentalmente por outro. Uma forma
+        comum de resolver esse problema é armazenar os dados de cada cliente em um <strong>namespace</strong>
+        (espaço de nomes) separado dentro do mesmo banco de dados vetorial.</p>
+
+      <div class="exemplo">Localização: local (ex.: Chroma) × nuvem (ex.: Pinecone, Weaviate)
+Proteção de dados: dados sensíveis podem exigir hospedagem local
+Preço: custo fixo (infraestrutura própria) × custo variável (serviço de nuvem)
+Desempenho × velocidade: mais qualidade nos resultados costuma significar consultas mais lentas</div>
+      <p class="legenda-exemplo">Resumo dos principais critérios a considerar na escolha de um banco de dados vetorial.</p> -->
+    </section>
+
+    <section id="recuperacao-dados">
+      <h3>3.5 Recuperação de Dados</h3>
+
+      <p>Para recuperar informação de um banco de dados vetorial, é preciso entender como ele encontra os
+        documentos relevantes. Diferentemente dos bancos de dados estruturados tradicionais, que sempre buscam
+        correspondências exatas, um banco de dados vetorial busca os documentos <strong>mais relevantes</strong>
+        para uma consulta, não necessariamente uma correspondência perfeita. Duas abordagens de similaridade são
+        especialmente importantes: a <strong>similaridade de cosseno</strong> e a <strong>Relevância de Margem
+        Máxima (Maximum Margin Relevance, MMR)</strong>.</p>
+
+      <p><strong>Similaridade de cosseno:</strong> o valor do cosseno é máximo quando o ângulo entre dois vetores
+        está próximo de zero. Em um sistema de coordenadas, dois vetores que apontam praticamente na mesma direção
+        têm um ângulo interno próximo de zero e, por isso, são considerados similares; se apontam em direções
+        completamente opostas, são considerados o mais diferentes possível. A similaridade de cosseno sempre
+        resulta em um valor entre −1 e +1. Embora o espaço de embeddings tenha muito mais do que duas dimensões, o
+        mesmo princípio se aplica: o processo de recuperação segue três passos: (1) calcular o ângulo (e o valor
+        de cosseno correspondente) entre o vetor da consulta e o vetor de cada documento (ou bloco de texto)
+        armazenado; (2) ordenar os documentos em ordem decrescente de similaridade; e (3) retornar os "top k"
+        resultados, por exemplo, apenas os 2 ou os 5 documentos mais similares à consulta (Figura 8).</p>
+
+      <figure class="figura-central">
+        <img src="BD6.png" alt="Princípio da similaridade de cosseno" style="width: 600px; max-width: 100%; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 8: princípio da similaridade de cosseno. O vetor da consulta (em vermelho) é comparado a vários vetores de documentos; quanto menor o ângulo entre eles, maior a similaridade. Apenas os "top k" documentos mais similares são retornados.</figcaption>
+      </figure>
+
+      <p>A similaridade de cosseno ajuda a encontrar os documentos mais relevantes, mas em alguns casos isso não é
+        suficiente e é aí que entra a <strong>Relevância de Margem Máxima (MMR)</strong>, uma técnica que busca
+        maximizar não apenas a relevância, mas também a <strong>diversidade</strong> dos documentos retornados.</p>
+
+      <div class="exemplo">Consulta: "Quais são as principais atrações turísticas de Nova York?"
+
+Resultado usando apenas similaridade de cosseno: três arranha-céus muito parecidos entre si (por exemplo, dois deles são prédios muito altos e semelhantes).
+
+Resultado usando MMR: um marco histórico, um parque e um distrito cultural, resultados mais relevantes e, ao mesmo tempo, mais diversos entre si.</div>
+      <p class="legenda-exemplo">Exemplo que ilustra a diferença entre buscar apenas pela similaridade de cosseno e usar a MMR: a MMR evita retornar vários resultados muito parecidos entre si, mesmo que individualmente bastante relevantes para a consulta.</p>
+
+      <p>O funcionamento da MMR depende de um hiperparâmetro chamado λ (lambda), que varia entre 0 e 1: o valor 0
+        faz a busca retornar apenas os resultados mais relevantes (equivalente à similaridade de cosseno pura),
+        enquanto o valor 1 retorna os resultados mais diversos possíveis, mesmo que um pouco menos relevantes
+        individualmente. Um valor de λ = 0.5 costuma ser um bom ponto de partida, equilibrando relevância e
+        diversidade. Na Figura 9 é possível visualizar uma comparação entre buscar apenas pela similaridade de cosseno (que pode retornar vários resultados
+         parecidos entre si) e usar a MMR (que privilegia também a diversidade dos resultados retornados).</p>
+
+      <figure class="figura-central">
+        <img src="BD7.png" alt="Comparação entre similaridade de cosseno e MMR" style="width: 650px; max-width: 100%; height: auto;">
+        <figcaption class="legenda-exemplo">Figura 9: comparação entre buscar apenas pela similaridade de cosseno e usar a MMR.</figcaption>
+      </figure>
+
+      <p>Com isso, fechamos os fundamentos conceituais do RAG e dos bancos de dados vetoriais: entendemos por que
+        os LLMs sozinhos têm limitações de acesso a conhecimento, como o pipeline de recuperação, aumento e geração
+        resolve parte desse problema, e como um banco de dados vetorial é construído e consultado, da divisão dos
+        documentos em blocos até a recuperação final por similaridade. A implementação prática completa de um
+        pipeline RAG, já com código e carregando documentos reais, gerando embeddings, montando um banco de dados
+        vetorial e conectando tudo a um LLM será o tema da Unidade 5.</p>
+    </section>
+  </section>
+
+  <section id="referencias">
+    <h2>4. Referências</h2>
+    <ul>
+      <li>
+        KLESEL, M.; WITTMANN, H. F. <strong>Retrieval-Augmented Generation (RAG)</strong>. Business &amp;
+        Information Systems Engineering, v. 67, n. 4, p. 551–561, 2025. DOI: 10.1007/s12599-025-00945-3.
+        <em>(fonte principal das Seções 1 e 2.1 usadas neste material)</em>
+      </li>
+      <li>
+        GOLLNICK, B. <strong>Generative AI with Python: The Developer's Guide to Pretrained LLMs, Vector
+        Databases, Retrieval Augmented Generation, and Agentic Systems</strong>. Boston: Rheinwerk Publishing,
+        2025. Capítulo 5: Vector Databases. ISBN 978-1-4932-2690-0. <em>(fonte principal do conteúdo sobre
+        bancos de dados vetoriais usado neste material)</em>
+      </li>
+      <li>
+        LEWIS, P.; PEREZ, E.; PIKTUS, A.; PETRONI, F.; KARPUKHIN, V.; GOYAL, N.; KÜTTLER, H.; LEWIS, M.; YIH, W.;
+        ROCKTÄSCHEL, T.; RIEDEL, S.; KIELA, D. <strong>Retrieval-augmented generation for knowledge-intensive
+        NLP tasks</strong>. In: Proceedings of the 34th International Conference on Neural Information
+        Processing Systems (NeurIPS 2020). Red Hook: Curran Associates, 2020. p. 9459–9474. <em>(artigo
+        original que propôs e batizou a técnica RAG, citado como fonte primária em KLESEL &amp; WITTMANN,
+        2025)</em>
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p>Material didático produzido para a disciplina Aplicações de Modelos de Linguagem Natural, Unidade 4.</p>
+  <p>Este material foi gerado por IA (tradução e redação didática). Todo o conteúdo foi extraído integralmente dos
+    artigos listados nas referências, selecionados e revisados pela professora da disciplina.</p>
+</footer>
+
+<script>
+  (function () {
+    var botao = document.getElementById('botao-menu');
+    var menu = document.getElementById('menu-secoes');
+    var overlay = document.getElementById('overlay');
+
+    function abrirMenu() {
+      menu.classList.add('aberto');
+      overlay.classList.add('aberto');
+      botao.classList.add('aberto');
+      botao.setAttribute('aria-expanded', 'true');
+    }
+
+    function fecharMenu() {
+      menu.classList.remove('aberto');
+      overlay.classList.remove('aberto');
+      botao.classList.remove('aberto');
+      botao.setAttribute('aria-expanded', 'false');
+    }
+
+    botao.addEventListener('click', function () {
+      if (menu.classList.contains('aberto')) {
+        fecharMenu();
+      } else {
+        abrirMenu();
+      }
+    });
+
+    overlay.addEventListener('click', fecharMenu);
+
+    var linksMenu = menu.querySelectorAll('a');
+    for (var i = 0; i < linksMenu.length; i++) {
+      linksMenu[i].addEventListener('click', fecharMenu);
+    }
+
+    document.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape') {
+        fecharMenu();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
