@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unidade 6 — Agentes LLM</title>
+<style>
+  :root {
+    --texto: #1f2328;
+    --texto-suave: #4b5157;
+    --linha: #e3e5e8;
+    --acento: #2f5fa3;
+    --fundo-code: #f5f6f8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: var(--texto);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ---------- Cabeçalho fixo com menu sanduíche ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--linha);
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    z-index: 100;
+  }
+
+  .menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .menu-btn span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background-color: var(--texto);
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .menu-btn.aberto span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.aberto span:nth-child(2) { opacity: 0; }
+  .menu-btn.aberto span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  header .titulo-curto {
+    margin-left: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--texto-suave);
+    font-weight: 600;
+  }
+
+  /* ---------- Painel de navegação (escondido por padrão) ---------- */
+  nav#menu-secoes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    max-width: 80vw;
+    background-color: #ffffff;
+    border-right: 1px solid var(--linha);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+    padding: 4.5rem 1.5rem 1.5rem 1.5rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 99;
+    overflow-y: auto;
+  }
+
+  nav#menu-secoes.aberto {
+    transform: translateX(0);
+  }
+
+  nav#menu-secoes h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--texto-suave);
+    margin: 0 0 1rem 0;
+  }
+
+  nav#menu-secoes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav#menu-secoes li {
+    margin-bottom: 0.35rem;
+  }
+
+  nav#menu-secoes a {
+    display: block;
+    padding: 0.5rem 0.6rem;
+    color: var(--texto);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  nav#menu-secoes a:hover {
+    background-color: var(--fundo-code);
+    color: var(--acento);
+  }
+
+  nav#menu-secoes ul ul {
+    margin-left: 0.9rem;
+    margin-top: 0.25rem;
+  }
+
+  nav#menu-secoes ul ul a {
+    font-size: 0.88rem;
+    color: var(--texto-suave);
+  }
+
+  /* fundo escurecido quando o menu está aberto */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 98;
+  }
+
+  #overlay.aberto {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ---------- Conteúdo ---------- */
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem 1.5rem;
+  }
+
+  main h1 {
+    font-size: 1.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitulo {
+    color: var(--texto-suave);
+    margin-top: 0;
+    margin-bottom: 2.5rem;
+    font-size: 1rem;
+  }
+
+  section {
+    margin-bottom: 3rem;
+    scroll-margin-top: 5rem;
+  }
+
+  section h2 {
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--linha);
+    padding-bottom: 0.4rem;
+    margin-bottom: 1.1rem;
+    color: var(--texto);
+  }
+
+  section h3 {
+    font-size: 1.15rem;
+    margin-top: 1.8rem;
+    margin-bottom: 0.7rem;
+    color: var(--texto);
+  }
+
+  section h4 {
+    font-size: 1.02rem;
+    margin-top: 1.4rem;
+    margin-bottom: 0.5rem;
+    color: var(--acento);
+  }
+
+  p { margin: 0 0 1rem 0; }
+
+  .exemplo {
+    background-color: var(--fundo-code);
+    border-left: 3px solid var(--acento);
+    border-radius: 4px;
+    padding: 0.8rem 1rem;
+    margin: 0.8rem 0 1.2rem 0;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.92rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
+  .legenda-exemplo {
+    font-size: 0.85rem;
+    color: var(--texto-suave);
+    margin-top: -0.9rem;
+    margin-bottom: 1.2rem;
+    font-style: italic;
+  }
+
+  .figura-central {
+    margin: 1.5rem auto;
+    text-align: center;
+  }
+
+  .figura-central img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  .figura-central figcaption {
+    margin-top: 0.5rem;
+  }
+
+  .figuras-lado-a-lado {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .figuras-lado-a-lado figure {
+    flex: 1 1 200px;
+    max-width: 31%;
+    margin: 0;
+    text-align: center;
+  }
+
+  .figuras-lado-a-lado img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  .figuras-lado-a-lado figcaption {
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .figuras-lado-a-lado figure {
+      max-width: 100%;
+    }
+  }
+
+  blockquote {
+    margin: 0 0 1rem 0;
+    padding: 0.6rem 1rem;
+    border-left: 3px solid #c9cdd2;
+    color: var(--texto-suave);
+    font-style: italic;
+  }
+
+  strong { color: var(--texto); }
+
+  #referencias ul {
+    padding-left: 1.2rem;
+  }
+
+  #referencias li {
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--texto-suave);
+    font-size: 0.85rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--linha);
+  }
+
+  code {
+    background-color: var(--fundo-code);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" id="botao-menu" aria-label="Abrir menu de seções" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="titulo-curto">Unidade 6 — Agentes LLM</span>
+</header>
+
+<div id="overlay"></div>
+
+<nav id="menu-secoes" aria-label="Navegação por seções">
+  <h2>Seções</h2>
+  <ul>
+    <li><a href="#introducao">1. Introdução</a></li>
+    <li>
+      <a href="#agente-ia">2. O que é um agente de IA?</a>
+      <ul>
+        <li><a href="#definicao-agente">2.1 Definição de agente</a></li>
+        <li><a href="#llm-cerebro">2.2 O LLM como "cérebro" do agente</a></li>
+        <li><a href="#aumentando-llm">2.3 Aumentando o LLM</a></li>
+        <li><a href="#autonomia">2.4 Autonomia</a></li>
+        <li><a href="#aplicacoes">2.5 Aplicações dos agentes</a></li>
+        <li><a href="#uso-responsavel">2.6 Uso responsável e avaliação</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#memoria">3. Memória</a>
+      <ul>
+        <li><a href="#por-que-memoria">3.1 Por que agentes precisam de memória</a></li>
+        <li><a href="#tipos-memoria">3.2 Tipos de memória</a></li>
+        <li><a href="#memoria-curto-prazo">3.3 Memória de curto prazo</a></li>
+        <li><a href="#memoria-longo-prazo">3.4 Memória de longo prazo</a></li>
+        <li><a href="#engenharia-contexto">3.5 Engenharia de contexto</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#ferramentas">4. Ferramentas, MCP e Skills</a>
+      <ul>
+        <li><a href="#o-que-sao-ferramentas">4.1 O que são ferramentas</a></li>
+        <li><a href="#etapas-ferramentas">4.2 As etapas do uso de ferramentas</a></li>
+        <li><a href="#mcp">4.3 Model Context Protocol (MCP)</a></li>
+        <li><a href="#skills">4.4 Skills</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#multiagentes">5. Sistemas multiagentes</a>
+      <ul>
+        <li><a href="#o-que-e-mas">5.1 O que é um sistema multiagente</a></li>
+        <li><a href="#padroes-orquestracao">5.2 Padrões de orquestração</a></li>
+        <li><a href="#subagentes-ferramentas">5.3 Subagentes como ferramentas</a></li>
+        <li><a href="#frameworks">5.4 Frameworks para sistemas multiagentes</a></li>
+        <li><a href="#a2a">5.5 Protocolos de comunicação (A2A)</a></li>
+      </ul>
+    </li>
+    <li><a href="#referencias">6. Referências</a></li>
+  </ul>
+</nav>
+
+<main>
+  <h1>Unidade 6 — Agentes LLM</h1>
+  <p class="subtitulo">Disciplina: Aplicações de Modelos de Linguagem Natural</p>
+
+  <section id="introducao">
+    <h2>1. Introdução</h2>
+
+    <p>Ao longo desta disciplina, percorremos um caminho em etapas. Nas Unidades 1 a 3, aprendemos a construir, aprimorar e proteger prompts: vimos o que é um prompt, conhecemos técnicas como few-shot, Chain-of-Thought e ReAct, e estudamos os ataques de injeção de prompt e suas defesas. Nas Unidades 4 e 5, demos ao LLM acesso a conhecimento externo por meio do RAG, construindo um pipeline completo de recuperação, aumento e geração.</p>
+
+    <p>Agora damos um passo além. Em vez de apenas gerar texto em resposta a um prompt, o LLM passa a <strong>agir com autonomia, perseguir objetivos e interagir com o mundo</strong>. É isso o que chamamos de <strong>agente de IA</strong>. A mudança é grande, e não apenas incremental: enquanto um LLM precisa de muita orientação a cada passo, um agente consegue decidir sozinho quais ações tomar, quando e como.</p>
+
+    <p>Neste material, a palavra "agente" significa sempre <strong>agente baseado em LLM</strong>. Existem outros tipos de agentes de IA que não usam LLMs, mas eles não são o foco aqui. Os agentes de programação já fazem parte do dia a dia de muitos desenvolvedores, e os agentes estão chegando a áreas como finanças, saúde, marketing e pesquisa científica.</p>
+
+    <p>Nesta unidade, veremos primeiro o que é um agente e como um LLM é "aumentado" com memória, ferramentas e planejamento. Em seguida, estudaremos a memória dos agentes e a engenharia de contexto, o uso de ferramentas (incluindo o Model Context Protocol e as Skills) e, por fim, os sistemas multiagentes.</p>
+  </section>
+
+  <section id="agente-ia">
+    <h2>2. O que é um agente de IA?</h2>
+
+    <h3 id="definicao-agente">2.1 Definição de agente</h3>
+
+    <p>A definição de agente muda à medida que a área avança, mas os seus fundamentos são estáveis. O livro que serve de base para esta unidade adota a definição clássica de Russell e Norvig:</p>
+
+    <div class="exemplo">"Um agente é qualquer coisa que pode ser vista como percebendo seu ambiente por meio de sensores e agindo sobre esse ambiente por meio de atuadores." — Russell &amp; Norvig, Inteligência Artificial: uma abordagem moderna.</div>
+    <p class="legenda-exemplo">Definição clássica de agente.</p>
+
+    <p>Essa definição reduz o agente a uma entidade que <strong>percebe e interage com o seu ambiente</strong>. Ela é ampla o suficiente para incluir entidades que não são LLMs, mas oferece uma estrutura clara, com quatro componentes:</p>
+
+    <ul>
+      <li><strong>Ambiente:</strong> o mundo com o qual o agente interage.</li>
+      <li><strong>Sensores:</strong> os componentes usados para observar o ambiente.</li>
+      <li><strong>Atuadores:</strong> as ferramentas que o agente usa para interagir com o ambiente.</li>
+      <li><strong>Programa do agente:</strong> o "cérebro", isto é, as regras que o agente usa para transformar observações em ações.</li>
+    </ul>
+
+    <p>A Figura 1 mostra como esses componentes se relacionam: o agente recebe percepções do ambiente pelos sensores, o programa do agente decide o que fazer, e os atuadores executam ações sobre o ambiente.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig01_agente_ambiente.png" alt="Agente com programa do agente, sensores e atuadores interagindo com o ambiente" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 1: um agente percebe o ambiente por meio de sensores e age sobre ele por meio de ferramentas (atuadores). Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Vamos relacionar essa terminologia aos LLMs. Em um agente baseado em LLM, o programa do agente (o cérebro) é um <strong>LLM de raciocínio</strong>, capaz de pensamento complexo. Por meio de módulos adicionais (<strong>memória, ferramentas e planejamento</strong>), esse LLM consegue interagir com o ambiente. Os <strong>atuadores são as ferramentas</strong> do LLM. Já os LLMs que interpretam mais do que texto, como imagens ou som, podem ser vistos como os <strong>sensores</strong>.</p>
+
+    <p>A peça que falta é o <strong>usuário</strong>, que pode fazer parte do ambiente e que normalmente inicia a interação, fazendo um pedido para o agente cumprir. A Figura 2 mostra como tudo isso se conecta e serve de "mapa" para o restante da unidade.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig02_componentes_agente.png" alt="Usuário, agente com LLM de raciocínio, memória, ferramentas e planejamento, e ambiente" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 2: o agente interage com o usuário e com o ambiente, usando um LLM de raciocínio, memória, ferramentas e planejamento para decidir suas ações. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Repare que o usuário envia uma pergunta e recebe uma resposta, enquanto o ambiente recebe ações e devolve feedback. Cada um dos blocos da figura (o LLM de raciocínio, a memória, as ferramentas e o planejamento) será explicado nas próximas subseções.</p>
+
+    <h3 id="llm-cerebro">2.2 O LLM como "cérebro" do agente</h3>
+
+    <p>Tradicionalmente, um LLM é um modelo que apenas <strong>prevê a próxima palavra</strong> a partir de um texto de entrada. Ele primeiro divide a entrada em <strong>tokens</strong>, processa esses tokens e prevê qual deve ser o próximo. Em seguida, acrescenta o token previsto à entrada e repete o processo. Esse ciclo, chamado de <strong>autorregressão</strong>, permite gerar respostas inteiras, um token por vez.</p>
+
+    <p>Os LLMs evoluíram bastante nos últimos anos:</p>
+
+    <ul>
+      <li>O GPT-3.5, que deu origem ao ChatGPT em novembro de 2022, conseguia manter conversas inteiras de forma muito parecida com um ser humano. Nos anos seguintes, os fornecedores de LLMs investiram em <strong>escalar o treinamento</strong> (mais dados, mais computação e modelos maiores), o que trouxe melhorias previsíveis. Isso é chamado de escalonamento no treinamento (<em>train-time scaling</em>).</li>
+      <li>Esse caminho encontrou um teto: aumentar o modelo ficou caro demais para o pequeno ganho de desempenho obtido.</li>
+      <li>Um grande avanço veio com os <strong>LLMs de raciocínio</strong> (<em>reasoning LLMs</em>), como o OpenAI o1 e o DeepSeek-R1. Em vez de "pensar" de forma implícita, esses modelos foram treinados para "pensar em voz alta": eles geram <strong>tokens de raciocínio</strong> (os "pensamentos") antes de chegar à resposta final. Assim, gastam mais computação para estruturar o problema em subproblemas, o que facilita perguntas que exigem vários passos. Em aplicações como o ChatGPT, esses pensamentos costumam ficar ocultos ou resumidos para o usuário.</li>
+    </ul>
+
+    <p>O raciocínio é central para os agentes. Fazer planos extensos, escolher as ferramentas adequadas, refletir sobre erros e revisar planos são comportamentos que exigem raciocínio avançado. LLMs de raciocínio se saem melhor em decisões complexas, em problemas de vários passos e em problemas novos; mas, quando se quer respostas rápidas e baratas, os LLMs "comuns" são preferíveis.</p>
+
+    <p>Essa ideia já apareceu na Unidade 2: a técnica Chain-of-Thought (CoT) pedia ao modelo, no próprio prompt, que explicitasse o seu raciocínio passo a passo. Os LLMs de raciocínio foram treinados para fazer isso por conta própria, sem precisar de uma instrução específica.</p>
+
+    <h3 id="aumentando-llm">2.3 Aumentando o LLM: memória, ferramentas, planejamento e reflexão</h3>
+
+    <p>Mesmo um LLM de raciocínio é incompleto. Como entidade do tipo "texto entra, texto sai", ele não controla o ambiente, não se lembra das interações e não aprende com elas. Para resolver isso, o LLM recebe alguns "aumentos".</p>
+
+    <h4>Memória</h4>
+
+    <p>Até aqui, consideramos conversas de turno único: uma pergunta e uma resposta. Em conversas de vários turnos, aparece uma falha importante: o LLM <strong>não guarda estado</strong> (<em>stateless</em>), isto é, não se lembra das conversas anteriores. Sem memória, o LLM é só uma "máquina de respostas".</p>
+
+    <p>Uma forma comum de simular memória é <strong>acrescentar a conversa anterior ao prompt atual</strong>. Na prática, os módulos de memória podem ser bem mais complexos e se parecem com a memória humana, com memória de curto e de longo prazo. Assim como nós, o LLM também sofre com a <strong>sobrecarga de informação</strong>: memorizar todos os detalhes pode piorar o desempenho. Por isso, é preciso equilibrar a quantidade e a qualidade da informação no prompt, o que se chama <strong>engenharia de contexto</strong> (detalhada na Seção 3).</p>
+
+    <h4>Ferramentas</h4>
+
+    <p>Com memória, o LLM se lembra das conversas, mas ainda não interage com o ambiente. Ferramentas externas, de uma calculadora ou um buscador até o acesso ao terminal e ao ambiente de programação, ampliam as suas capacidades.</p>
+
+    <p>Porém, <strong>o LLM não executa ferramentas sozinho</strong>. Como função "texto entra, texto sai", ele só consegue <strong>expressar a intenção</strong> de agir. Por exemplo, ao receber "Quanto é 5,1 vezes 7,3?", o LLM pode gerar o texto <code>multiply(5.1, 7.3)</code>. Esse texto apenas representa a intenção; é um software externo (escrito pelo desenvolvedor, possivelmente com ajuda de um framework de agentes) que lê a saída (por exemplo, em JSON), escolhe a ferramenta correta, preenche os parâmetros e a executa. A Anthropic chama o LLM com memória e ferramentas de <strong>"LLM aumentado"</strong> (<em>augmented LLM</em>).</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig03_fluxo_chamada_ferramenta.png" alt="Fluxo de um LLM chamando uma ferramenta de multiplicação" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 3: fluxo de um LLM chamando uma ferramenta: o LLM gera a intenção em JSON, um software externo executa a função e o resultado volta ao LLM. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Na Figura 3, o primeiro LLM não calcula nada: ele apenas produz um JSON dizendo qual função chamar e com quais argumentos. O interpretador de código executa a multiplicação, e o resultado (<code>37.23</code>) é entregue de volta a um LLM, que redige a resposta final para o usuário.</p>
+
+    <h4>Planejamento e reflexão</h4>
+
+    <p>O ingrediente final para ir de um LLM "comum" a um agente é a capacidade de <strong>planejar e refletir</strong>. Se o LLM tem acesso a dezenas de ferramentas (por exemplo, todas as funções da API do GitHub), como ele decide qual usar?</p>
+
+    <p>O planejamento consiste em dividir uma tarefa grande em passos menores e executáveis, a chamada <strong>decomposição de tarefas</strong>. O agente cria um plano, executa uma tarefa por vez e, ao terminar cada uma, raciocina sobre qual deve ser o próximo passo. Mas criar o plano não basta: no meio do caminho, o agente pode descobrir que alguns passos não são adequados. Por exemplo, um agente que pesquisa artigos descobre que o Google e o arXiv são insuficientes e acrescenta ao plano a busca no Semantic Scholar e no PubMed. Ao <strong>refletir</strong> sobre o próprio comportamento, o agente tenta encontrar os seus erros e corrigi-los, criando um ciclo de <strong>planejar, agir e refletir</strong>.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig04_planejamento_reflexao.png" alt="Agente com LLM de raciocínio criando um plano, agindo e atualizando o plano" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 4: planejamento e reflexão: o agente cria um plano, age e atualiza o plano conforme descobre novas informações. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Chegamos, assim, à definição: <strong>um LLM de raciocínio aumentado com memória, ferramentas, planejamento e reflexão é o que consideramos um agente de IA.</strong> Note que o ciclo "pensar, agir, observar" da Figura 4 é exatamente a ideia do ReAct, vista na Unidade 2.</p>
+
+    <h3 id="autonomia">2.4 Autonomia</h3>
+
+    <p>O agente tem bastante liberdade: pode escolher entre ferramentas, atualizar o plano, acrescentar passos ou parar quando chegou a uma resposta adequada. Esse comportamento é a <strong>autonomia</strong> concedida ao agente.</p>
+
+    <p>Na prática, nem todo agente tem autonomia total. Muitas vezes são necessários <strong>guardrails</strong> para que o modelo não tome ações potencialmente destrutivas, como apagar arquivos importantes. Os guardrails já apareceram na Unidade 3, como defesa contra a injeção de prompt; aqui eles servem também para limitar o que o agente pode fazer.</p>
+
+    <p>A autonomia existe em um <strong>espectro</strong>. Ela pode ser parcial (o modelo executa um único passo, mas escolhe livremente entre ferramentas) ou total, sem nenhuma restrição. Para alguns, um sistema é tanto mais "agêntico" quanto mais controle o LLM tem sobre as suas ações. Nesse material, vamos considerar que, se há comportamento orientado a objetivos e tomada de decisão, já se pode falar em agente, inclusive em fluxos de trabalho orquestrados com autonomia parcial.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig05_niveis_autonomia.png" alt="Três níveis de autonomia: prompting, passos fixos e agente" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 5: agentes têm mais autonomia do que uma única geração do LLM ou um fluxo de passos fixos. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>A Figura 5 pode ser resumida em três níveis crescentes de autonomia:</p>
+
+    <div class="exemplo">Prompting → o LLM recebe o prompt e gera a resposta (sem autonomia).
+Passos fixos → um fluxo predefinido, por exemplo: (1) busca vetorial e (2) LLM de raciocínio com memória e ferramentas.
+Agente → passos autônomos: o LLM de raciocínio cria um plano, age, atualiza o plano e decide quando responder.</div>
+    <p class="legenda-exemplo">Três níveis crescentes de autonomia, como na Figura 5.</p>
+
+    <p>Repare que o pipeline RAG das Unidades 4 e 5 corresponde ao nível intermediário: os passos (recuperar e depois gerar) são sempre os mesmos. Em um agente, é o próprio LLM que decide quais passos executar e em que ordem.</p>
+
+    <h3 id="aplicacoes">2.5 Aplicações dos agentes</h3>
+
+    <p>A autonomia torna os agentes especialmente úteis em <strong>problemas abertos</strong>, nos quais os passos exatos não são conhecidos de antemão: o objetivo é claro, mas o caminho não. Exemplos de usos:</p>
+
+    <ul>
+      <li><strong>Programação:</strong> assistentes como Antigravity, Claude Code e Codex são, provavelmente, o uso mais comum. O objetivo costuma ser claro (uma funcionalidade específica), os requisitos são definidos (linguagem, frameworks) e o código pode ser verificado automaticamente.</li>
+      <li><strong>Pesquisa aprofundada (<em>deep research</em>):</strong> o agente pesquisa um tema de forma autônoma em fontes como arXiv, PubMed e Google Scholar. O resultado não é perfeito, mas é um ótimo ponto de partida para entrar em um assunto novo.</li>
+      <li><strong>Automação:</strong> padronizar e automatizar processos, como estruturar dados de pacientes armazenados de formas diferentes em hospitais diferentes, facilitando a pesquisa em saúde.</li>
+    </ul>
+
+    <h3 id="uso-responsavel">2.6 Uso responsável e avaliação de agentes</h3>
+
+    <p>Como os agentes podem agir diretamente no mundo digital ou físico, é preciso considerar as suas implicações éticas. Há quem defenda agentes totalmente autônomos e há quem defenda que eles nem deveriam ser desenvolvidos; a área está no meio desses extremos. Tudo depende do contexto: um agente de programação pode ser muito útil, mas um agente que diagnostica pacientes sem intervenção humana é, com a tecnologia atual, prejudicial. Alguns pontos a considerar:</p>
+
+    <ul>
+      <li><strong>Humano no circuito (<em>human in the loop</em>):</strong> quanto mais autônomo o agente, maior a necessidade de pessoas autorizarem, verificarem e auditarem as suas decisões, normalmente checando a saída ou os passos intermediários antes de continuar.</li>
+      <li><strong>Guardrails:</strong> a autonomia total pode ser exagerada para a tarefa e até prejudicial. Um sistema com mais guardrails costuma ser mais eficaz, pois direciona o agente para os comportamentos esperados.</li>
+      <li><strong>Desinformação:</strong> agentes continuam sendo LLMs e podem gerar informações incorretas com confiança (alucinações). Sistemas em que a informação correta é crítica precisam de verificações adicionais.</li>
+    </ul>
+
+    <p>Avaliar LLMs já é difícil, e os agentes tornam isso ainda mais difícil, porque raciocinam em vários passos, chamam ferramentas e executam sequências de ações. Grootendorst e Alammar (2026) propõe dois olhares complementares:</p>
+
+    <ul>
+      <li><strong>Resultado:</strong> a tarefa foi de fato concluída? Por exemplo, a mensagem foi enviada?</li>
+      <li><strong>Trajetória:</strong> os passos e as chamadas de ferramentas foram eficientes e corretos?</li>
+    </ul>
+
+    <p>Duas propriedades extras merecem atenção. A <strong>confiabilidade</strong>: o agente acerta sempre, e não só uma vez, já que as suas saídas são aleatórias? E a <strong>segurança</strong>: ele evita danos vindos de um usuário mal-intencionado, de dados manipulados que lê ou dos seus próprios erros? Por isso, avaliar um agente é avaliar um sistema inteiro, e não apenas um modelo.</p>
+  </section>
+
+  <section id="memoria">
+    <h2>3. Memória</h2>
+
+    <h3 id="por-que-memoria">3.1 Por que agentes precisam de memória</h3>
+
+    <p>Sozinhos, os LLMs "esquecem": não se lembram de conversas passadas nem das ações que já tomaram. Se você carregar um LLM localmente e pedir que ele lembre o seu nome, ele não conseguirá sem receber memória explicitamente. Já o ChatGPT e o Claude não são LLMs "puros": são LLMs aumentados com módulos de memória e ferramentas.</p>
+
+    <p>Sem memória, um assistente pessoal não lembraria as conversas anteriores, um agente de programação não entenderia o projeto inteiro e um agente esqueceria que já executou uma ação e a repetiria. A memória inclui não só as ações passadas do agente, mas também <strong>informação externa</strong> (por exemplo, a documentação e as <em>issues</em> de um projeto, para um agente de programação).</p>
+
+    <p>Memória envolve tanto <strong>lembrar</strong> quanto <strong>armazenar</strong> informação nova, e também decidir o que guardar, como guardar e o que esquecer. Com memória, o agente pode lembrar erros e experiências malsucedidas e se sair melhor em tarefas parecidas no futuro. Ferramentas e planejamento também dependem de memória: como usar uma ferramenta ou seguir um plano se o agente os esquece?</p>
+
+    <h3 id="tipos-memoria">3.2 Tipos de memória</h3>
+
+    <p>A memória dos agentes costuma imitar os tipos de memória humana. O artigo "Cognitive Architectures for Language Agents", descreve quatro tipos de memória comuns em agentes: uma de curto prazo e três de longo prazo.</p>
+
+    <ul>
+      <li><strong>Memória de trabalho (curto prazo):</strong> sistema de capacidade limitada que guarda temporariamente a informação necessária para decidir e raciocinar. Para LLMs, é o <strong>histórico do chat</strong>, reenviado ao modelo a cada chamada.</li>
+      <li><strong>Memória episódica (longo prazo):</strong> lembrança de eventos e experiências específicas (por exemplo, a sua última festa de aniversário). Para agentes, são as <strong>ações já tomadas e os seus resultados</strong>.</li>
+      <li><strong>Memória semântica (longo prazo):</strong> conhecimento sobre o mundo (por exemplo, a capital da França). Para agentes, pode ser a consulta a uma <strong>base externa</strong>, como a Wikipédia ou o código do projeto.</li>
+      <li><strong>Memória procedural (longo prazo):</strong> padrões de como fazer as coisas (por exemplo, programar em Python). Para agentes, pode estar nos <strong>parâmetros do modelo</strong> ou no <strong>prompt de sistema</strong>, que persiste entre as chamadas.</li>
+    </ul>
+
+    <figure class="figura-central">
+      <img src="U6_fig06_tipos_memoria.png" alt="Memória de trabalho, procedural, episódica e semântica em torno do LLM" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 6: os quatro tipos de memória de um agente: de trabalho, procedural, episódica e semântica. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Na Figura 6, a memória procedural está "colada" ao LLM, pois faz parte do seu comportamento; a memória semântica é carregada de uma fonte externa; a memória episódica armazena o que o agente fez; e a memória de trabalho guarda a pergunta e a resposta da conversa em andamento.</p>
+
+    <p>Esses tipos de memória nem sempre são armazenados separadamente: dependendo da implementação, podem formar um único conjunto ou bancos separados.</p>
+
+    <h3 id="memoria-curto-prazo">3.3 Memória de curto prazo</h3>
+
+    <p>A memória de curto prazo é a informação sobre as <strong>interações recentes</strong>, normalmente a conversa em andamento. Exemplo:</p>
+
+    <div class="exemplo">Primeira pergunta: "Olá! Somos Maarten e Jay, autores de 'An Illustrated Guide to AI Agents'."
+Segunda pergunta: "Olá! Quais são os nossos nomes?"
+
+Sem memória: "Não sei qual é o seu nome, você não me disse!"
+Com memória (histórico da conversa): "Seus nomes são Maarten e Jay."</div>
+    <p class="legenda-exemplo">Sem memória, cada chamada ao LLM começa do zero; com o histórico da conversa, o agente "lembra" a interação anterior.</p>
+
+    <h4>Memória de conversa</h4>
+
+    <p>O histórico da conversa serve de contexto para gerar respostas. Ele é organizado como uma lista de <strong>mensagens</strong>, cada uma com um papel (<em>role</em>): o <strong>prompt de sistema</strong> (<code>system</code>), a pergunta do <strong>usuário</strong> (<code>user</code>) e a resposta do <strong>assistente</strong> (<code>assistant</code>). Essas mensagens são atualizadas a cada resposta e reenviadas ao LLM como entrada.</p>
+
+    <p>No exemplo da Figura 7, o usuário diz que flamingos são os seus animais favoritos. Quando depois pergunta "Qual é o meu animal favorito?", não é o LLM que "se lembra": ele recebe o histórico inteiro, que contém a informação. Em outras palavras, <strong>o LLM não lembra de fato as conversas, ele é informado sobre elas</strong> ao inseri-las no prompt.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig07_historico_mensagens.png" alt="Histórico da conversa como lista de mensagens com role e content" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 7: o histórico da conversa representado como uma lista de mensagens em JSON. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <h4>Janela de contexto</h4>
+
+    <p>A maioria dos LLMs tem uma <strong>janela de contexto</strong> (<em>context window</em>) limitada: o número máximo de tokens que consegue processar, contando entrada e saída juntas. Exemplo, uma pergunta e uma resposta curtas somam 13 tokens de um total possível de 8.192. Conforme o histórico cresce, cresce o número de tokens. Se o histórico ficar grande demais, a resposta pode ser cortada no meio, ou o LLM pode nem conseguir processar o prompt. Além disso, quanto mais informação no prompt, mais difícil é para o LLM prestar atenção em tudo.</p>
+
+    <p>Por isso, existem técnicas para fornecer o histórico sem lotar a janela:</p>
+
+    <ul>
+      <li><strong>Corte (<em>trimming</em>):</strong> quando o histórico fica grande demais, removem-se as primeiras interações até caber. Exemplo, mantêm-se apenas os <strong>dois últimos turnos</strong> (pares usuário/assistente). A técnica é simples, mas pode descartar informação importante do início da conversa. Por isso, é importante guardar a conversa completa separadamente, em uma <strong>trajetória</strong> (<em>trajectory</em>), para depuração.</li>
+      <li><strong>Sumarização (<em>summarization</em>):</strong> outro LLM (ou o mesmo) resume cada turno e acrescenta o resumo a um resumo geral da conversa, que é enviado junto com a pergunta. O resumo também cresce, mas bem mais devagar do que o histórico bruto. Há variações: resumir os últimos cinco turnos de uma vez, manter um único resumo atualizado a cada turno, ou resumir os turnos antigos e manter os recentes sem compressão. O cuidado é não comprimir demais e perder informação importante.</li>
+    </ul>
+
+    <div class="figuras-lado-a-lado">
+      <figure style="max-width: 48%;">
+        <img src="U6_fig08_corte_historico.png" alt="Corte do histórico mantendo os dois últimos turnos">
+        <figcaption class="legenda-exemplo">Figura 8: corte (trimming): apenas os últimos turnos da conversa são mantidos. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+      </figure>
+      <figure style="max-width: 48%;">
+        <img src="U6_fig09_sumarizacao.png" alt="Sumarização de cada turno em um resumo completo">
+        <figcaption class="legenda-exemplo">Figura 9: sumarização: cada turno é resumido por um LLM e incorporado a um resumo completo da conversa. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+      </figure>
+    </div>
+
+    <p>Manter o histórico exige, portanto, entender o que importa: todo o histórico, só o recente ou um resumo? Para conversas curtas, o histórico completo funciona bem; para longas sequências de ações, talvez não.</p>
+
+    <h3 id="memoria-longo-prazo">3.4 Memória de longo prazo</h3>
+
+    <p>À medida que crescem o histórico e o número de ações, cresce a necessidade de memória de longo prazo, que pode incluir também conhecimento externo ou proprietário. Ela costuma envolver <strong>bancos de dados externos</strong> consultáveis, com informações sobre execuções anteriores do agente (memória episódica) ou sobre o contexto da aplicação, como os documentos de uma organização (memória semântica).</p>
+
+    <h4>RAG como memória de longo prazo</h4>
+
+    <p>O método mais comum é o RAG, que já estudamos nas Unidades 4 e 5. Do ponto de vista dos agentes, <strong>o banco de dados vetorial funciona como a memória de longo prazo do LLM</strong>. Relembrando: na ingestão, os dados externos são convertidos em embeddings por um modelo de embeddings e armazenados em um banco vetorial. Na inferência, há quatro passos:</p>
+
+    <ol>
+      <li>A pergunta é transformada em embedding com o mesmo modelo.</li>
+      <li>Ela é comparada ao banco, e os itens mais relevantes são recuperados (por similaridade de cosseno, ou de forma híbrida, combinada com abordagens do tipo <em>bag-of-words</em>).</li>
+      <li>Os itens relevantes e a pergunta são combinados no prompt.</li>
+      <li>O LLM gera a resposta.</li>
+    </ol>
+
+    <p>O RAG ajuda a reduzir alucinações, mas não há garantia de que o contexto recuperado seja sempre bom o suficiente. Uma alternativa é aceitar apenas documentos com uma similaridade mínima, em vez de sempre pegar os três primeiros. Veja o exemplo:</p>
+
+    <div class="exemplo">Documentos externos: "Sarah trabalha como bióloga marinha estudando recifes de coral.", "Sarah mora em Lisboa, Portugal.", "O hobby favorito de Sarah é escalada.", "O animal favorito de Sarah são os flamingos.", "Ilse é engenheira de software em uma startup de energia renovável.", "O animal favorito de Ilse são os golfinhos.", …
+
+Pergunta: "Qual é o animal favorito de Sarah?"
+Contexto recuperado (3 documentos mais similares): animal favorito de Sarah; hobby de Sarah; animal favorito de Ilse.
+Resposta: "O animal favorito de Sarah são os flamingos."</div>
+    <p class="legenda-exemplo">Exemplo do livro: o agente só consegue responder porque recebeu, via RAG, os documentos relevantes como contexto.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig10_rag_quatro_etapas.png" alt="RAG em quatro etapas: embedding, recuperação, aumento e geração" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 10: inferência com RAG em quatro etapas: embedding da pergunta, recuperação, aumento do prompt e geração. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Repare que, entre os três documentos recuperados, apenas um responde de fato à pergunta. Ainda assim, o LLM consegue usar o contexto certo para responder. Esse problema de contexto pouco relevante voltará a aparecer na Seção 3.5.</p>
+
+    <h4>MemoryBank</h4>
+
+    <p>Um exemplo de memória mais elaborada é o <strong>MemoryBank</strong>, um mecanismo que armazena as experiências das conversas em um banco separado e o <strong>atualiza continuamente</strong>. Ele é inspirado na <strong>curva do esquecimento de Ebbinghaus</strong>: esquecemos rápido, mas a repetição espaçada reduz o esquecimento. Assim, as memórias recuperadas com frequência ficam mais tempo, e as que não são acessadas por muito tempo podem ser removidas. O MemoryBank usa três tipos de memória: o histórico bruto, <strong>resumos de eventos passados</strong> gerados por um LLM e um <strong>retrato do usuário</strong> (traços de personalidade e emoções), sempre enviado como contexto adicional.</p>
+
+    <h4>RAG agêntico</h4>
+
+    <p>No RAG simples, o LLM recebe o que foi recuperado, mas <strong>não tem controle sobre o que é recuperado</strong>. No <strong>RAG agêntico</strong> (<em>agentic RAG</em>), um agente acessa as bases externas <strong>como ferramentas</strong> e decide de qual fonte buscar, quantas vezes buscar e quando já tem contexto suficiente para responder.</p>
+
+    <p>Com um único agente, ele funciona como um <strong>roteador</strong> entre várias fontes, podendo inclusive usar o resultado de uma busca para fazer outra busca em outro banco. Em sistemas multiagentes, agentes de recuperação menores e especializados (cada um responsável por uma fonte, que pode ser um banco vetorial, uma busca na web ou uma API como Slack ou Gmail) são coordenados por um agente mais capaz.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig11_rag_agentico.png" alt="RAG agêntico: o agente seleciona as bases de conhecimento" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 11: RAG agêntico: o agente escolhe de quais bases recuperar contexto e decide se responde ou busca mais informação. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Na Figura 11, o agente decidiu consultar apenas <em>db1</em> e <em>db4</em>. Com o contexto recuperado, ele pode gerar a resposta ou voltar ao passo 1 para buscar em outra base. A escolha entre um e vários agentes envolve algumas compensações:</p>
+
+    <div class="exemplo">RAG com um único agente
+  Vantagens: mais barato (menos chamadas de API); sistema mais simples, mais fácil de depurar.
+  Desvantagens: ponto único de falha (erros podem se acumular sem feedback externo); teto de acurácia menor (a janela de contexto pode ficar sobrecarregada com muitas fontes).
+
+RAG com múltiplos agentes
+  Vantagens: modularidade (LLMs especializados podem ser usados e trocados facilmente); teto de acurácia maior (agentes podem dar feedback uns aos outros e checar alucinações).
+  Desvantagens: custo maior (vários agentes rodando em paralelo); complexidade (mais difícil descobrir onde surgem os erros).</div>
+    <p class="legenda-exemplo">Prós e contras do RAG agêntico com um ou com vários agentes (Tabela 4-1 do livro). A recomendação dos autores é começar com um único agente.</p>
+
+    <h4>A-MEM e Search-o1</h4>
+
+    <p>O <strong>A-MEM</strong> é uma memória agêntica inspirada no método de anotações <strong>Zettelkasten</strong>, em que cada nota guarda uma única unidade de conhecimento (atomicidade) e se liga a outras notas (notas hipertextuais). Cada nota de memória contém a interação original, o horário, palavras-chave, etiquetas e uma descrição contextual geradas pelo LLM. A nota é transformada em embedding e comparada às outras memórias, e o LLM decide a quais delas ligá-la. Em seguida, as memórias antigas ligadas também são atualizadas, criando uma memória que evolui com o tempo.</p>
+
+    <p>O <strong>Search-o1</strong> faz buscas <strong>durante o raciocínio</strong> do LLM, usando marcadores especiais para iniciar uma busca e indicar o seu resultado. Como os documentos recuperados podem ser longos e conter informação irrelevante, um módulo chamado <strong>Reason-in-Documents</strong> condensa a informação recuperada antes de inseri-la no raciocínio.</p>
+
+    <h3 id="engenharia-contexto">3.5 Engenharia de contexto</h3>
+
+    <p>Além dos tipos de memória já vistos, há outras formas de contexto que podem ser dadas ao agente:</p>
+
+    <div class="exemplo">Prompt de sistema → regras e contexto central do agente (memória procedural)
+Histórico da conversa → conversa entre usuário e assistente e os "pensamentos" do LLM (memória de trabalho)
+Experiências passadas → eventos, ações e observações de ferramentas, fatos sobre o usuário (memória episódica)
+Informação recuperada → informação externa, normalmente em um banco vetorial acessado via RAG (memória semântica)</div>
+    <p class="legenda-exemplo">Fontes de contexto que podem ser fornecidas a um agente. A lista não é exaustiva: inclui também esquemas de ferramentas e de saída, por exemplo.</p>
+
+    <p>Ou seja, <strong>o prompt do usuário é só uma parte do contexto total do LLM</strong>. Podemos ver o LLM como uma <strong>função</strong> que recebe tokens (o contexto) e devolve tokens. Para melhorar a saída, ou otimizamos o próprio LLM (treinamento, ajuste fino), ou otimizamos a entrada. A <strong>engenharia de contexto</strong> (<em>context engineering</em>) consiste em encontrar o melhor contexto, aquele que maximiza a qualidade da saída do LLM para uma tarefa. Enquanto a <strong>engenharia de prompt</strong>, estudada nas Unidades 1 e 2, otimiza os prompts de sistema e do usuário, a <strong>engenharia de contexto</strong> otimiza o contexto inteiro (Figura 12).</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig12_engenharia_contexto.png" alt="Engenharia de prompt e engenharia de contexto" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 12: a engenharia de prompt otimiza os prompts de sistema e do usuário; a engenharia de contexto otimiza todo o contexto que entra no LLM. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <h4>Por que não simplesmente encher a janela de contexto?</h4>
+
+    <p>As janelas de contexto cresceram muito (o Gemini 1.5 chegou a um milhão de tokens em fevereiro de 2024), e poderia parecer que basta colocar tudo nelas, dispensando até o RAG. Há, porém, três argumentos contra essa ideia:</p>
+
+    <ul>
+      <li>O teste da <strong>agulha no palheiro</strong> (<em>needle in a haystack</em>) coloca um fato aleatório no meio de um texto longo e pede ao modelo que o encontre. Mas encontrar a agulha é só uma tarefa de recuperação, e não mede a compreensão de contextos longos.</li>
+      <li>Benchmarks como o <strong>RULER</strong> mostraram que modelos que iam bem no teste da agulha tinham <strong>quedas fortes de desempenho</strong> com contextos maiores. Outros estudos chegaram à mesma conclusão, e alguns chamaram o fenômeno de <strong>apodrecimento do contexto</strong> (<em>context rot</em>).</li>
+      <li><strong>Custo e latência:</strong> mais tokens significam respostas mais lentas e mais memória de GPU (VRAM). Despejar tudo no contexto é receita para o fracasso.</li>
+    </ul>
+
+    <p>A engenharia de contexto busca colocar <strong>a informação certa, no lugar certo e no formato certo</strong>: nem informação demais ou irrelevante (o custo sobe e o desempenho cai), nem de menos (o LLM age sem entender a situação). É, em grande parte, um problema de <strong>arquitetura</strong>: rastrear, armazenar e recuperar informação de forma eficiente.</p>
+
+    <h4>Engenharia de contexto em sistemas multiagentes</h4>
+
+    <p>Em sistemas com vários agentes, é preciso gerenciar o contexto de cada agente e também o contexto compartilhado nas interações entre eles. Agentes menores e especializados podem assumir parte do "peso" do contexto, deixando o agente principal (o <strong>orquestrador</strong>) com mais recursos. Por trabalharem com contextos menores e responsabilidades claras, esses agentes são mais fáceis de testar e depurar.</p>
+
+    <h4>Estratégias para otimizar o contexto</h4>
+
+    <ul>
+      <li><strong>Rastreamento e armazenamento:</strong> antes de oferecer contexto, é preciso registrá-lo. Exemplos do que rastrear: o comportamento do agente (uso de ferramentas, saídas, interações entre subagentes, raciocínio, histórico, falhas e sucessos), o comportamento do usuário (intenções, feedback), as fontes de conhecimento (bases proprietárias, documentos externos, arquivos como PLAN.md e REQUIREMENTS.md) e as configurações do sistema (hiperparâmetros, ferramentas disponíveis, políticas e guardrails).</li>
+      <li><strong>Seleção:</strong> o RAG já é uma forma de selecionar o contexto relevante. Um <strong>reranqueador</strong> (<em>reranker</em>), geralmente um modelo de linguagem, recebe a pergunta e os documentos recuperados e os reordena por relevância, permitindo ficar só com os melhores. Exemplo, buscar "causas das mudanças climáticas" pode trazer documentos sobre gases do efeito estufa, atividade industrial e desmatamento: todos relacionados, mas nem sempre respondendo diretamente à pergunta. Selecionar contexto também pode significar dar o contexto certo <strong>para o agente certo</strong>.</li>
+      <li><strong>Compressão:</strong> resumir o histórico ou os documentos recuperados com um LLM e <strong>reduzir a redundância</strong>. Mesmo após o reranqueamento, os cinco melhores documentos podem dizer quase a mesma coisa. Aqui entra a <strong>MMR</strong> (Relevância Marginal Máxima), vista na Unidade 4: ela combina a similaridade de cada documento com a pergunta (relevância) e a similaridade entre os documentos (redundância), usando o parâmetro λ, para escolher documentos relevantes e, ao mesmo tempo, diferentes entre si. Técnicas de deduplicação também ajudam.</li>
+      <li><strong>Ordenação:</strong> a ordem do contexto importa. Pesquisas mostraram que os LLMs prestam mais atenção ao <strong>início e ao fim</strong> do prompt e tendem a perder o que está no meio: é o fenômeno <strong>perdido no meio</strong> (<em>lost in the middle</em>) (Liu et al, 2024). Ele lembra o <strong>efeito de posição serial</strong> humano: lembramos melhor os primeiros itens (efeito de primazia) e os últimos (efeito de recência) de uma lista.</li>
+    </ul>
+
+    <figure class="figura-central">
+      <img src="U6_fig13_perdido_no_meio.png" alt="Gráfico da acurácia em função da posição do documento com a resposta" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 13: o fenômeno "perdido no meio" (lost in the middle): a acurácia é maior quando a resposta está no início ou no fim do contexto. Adaptado de Grootendorst e Alammar (2026), a partir de Liu et al. (2024).</figcaption>
+    </figure>
+
+    <p>No gráfico da Figura 13, quando o documento com a resposta está entre as posições 7 e 16, a acurácia do modelo fica abaixo até da situação em que ele não recebe nenhum documento (a linha tracejada, chamada <em>closed-book</em>). Isso mostra que a posição da informação no prompt é tão importante quanto a sua presença.</p>
+
+    
+  </section>
+
+  <section id="ferramentas">
+    <h2>4. Ferramentas, MCP e Skills</h2>
+
+    <h3 id="o-que-sao-ferramentas">4.1 O que são ferramentas</h3>
+
+    <p>Sozinhos, os LLMs são funções que recebem texto e devolvem texto. <strong>Ferramentas</strong> (<em>tools</em>), na forma de funções e APIs, permitem que eles interajam com qualquer sistema exposto a eles, de bases de código e ferramentas internas até bancos de dados online e assistentes domésticos. Um traço que define um agente é a capacidade de <strong>procurar, escolher e usar ferramentas de forma autônoma</strong>; agentes muito capazes podem até criar as suas próprias ferramentas.</p>
+
+    <p>Ferramentas também servem para acessar memórias e conhecimento externo (como no RAG agêntico) ou até outros LLMs especializados (multimodais ou de programação). Sem ferramentas, um agente pode pensar e planejar, mas <strong>não pode agir</strong>.</p>
+
+    <p>O grau de autonomia define como as ferramentas são usadas. Em um <strong>fluxo fixo</strong>, as ferramentas são chamadas em uma ordem predefinida: por exemplo, um agente de pesquisa sempre consulta o arXiv e o Google e depois resume. Com mais autonomia, o <strong>agente escolhe</strong> qual ferramenta usar e quando: por exemplo, busca primeiro no Google, depois no arXiv, e então responde.</p>
+
+    <h3 id="etapas-ferramentas">4.2 As etapas do uso de ferramentas</h3>
+
+    <p>Usar uma ferramenta envolve mais passos do que parece. O processo pode ser dividido em cinco etapas: <strong>criação, definição, seleção, chamada e processamento da saída</strong>. Vale reforçar o que vimos na Seção 2.3: o LLM não chama a ferramenta; ele <strong>mostra a intenção</strong> de chamá-la, e a execução é feita por um processo externo (automatizado).</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig14_etapas_ferramentas.png" alt="As cinco etapas do uso de ferramentas entre usuário e LLM" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 14: as cinco etapas do uso de ferramentas: criação, definição, seleção, chamada e processamento da saída. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <h4>Criação</h4>
+
+    <p>Ferramentas costumam ser funções acessadas por uma API ou por código interno. Como os LLMs não são conhecidos pelas habilidades matemáticas, o exemplo é uma função <code>multiply(a, b)</code> que multiplica dois valores (recebidos como texto, porque o LLM só produz texto). As ferramentas devem ser <strong>bem documentadas</strong>, como se fossem feitas para pessoas: o usuário entende o que a ferramenta faz? O retorno está claro? Os nomes das variáveis são descritivos? Isso é ainda mais importante para LLMs, que precisam ser informados explicitamente do que existe e do que cada ferramenta consegue fazer.</p>
+
+    <h4>Definição</h4>
+
+    <p>Depois de criada, é preciso informar ao LLM o que a ferramenta faz, como é usada e em que contexto. Há dois caminhos. O uso de ferramentas pode ser <strong>aprendido no treinamento</strong>: modelos recentes, como Qwen3 e DeepSeek-V3.2, aprendem a reconhecer definições de ferramentas no prompt e a usá-las de forma geral. Ou a definição pode ser passada <strong>pelo prompt</strong>, de duas formas.</p>
+
+    <p>A primeira é descrever as ferramentas <strong>em linguagem natural</strong>, no prompt de sistema:</p>
+
+    <div class="exemplo"># Definição das ferramentas
+Você pode usar as seguintes ferramentas:
+- multiply(a, b): multiplica dois números
+- divide(a, b): divide a por b
+
+# Uso das ferramentas
+Quando precisar usá-las, escreva: [nome_da_funcao(valor1, valor2)]</div>
+    <p class="legenda-exemplo">Definição de ferramentas em linguagem natural no prompt de sistema. O formato não é padronizado: um pequeno programa (validador ou parser) precisa reconhecer a chamada, o que pode gerar erros se o LLM não seguir as instruções à risca.</p>
+
+    <p>A segunda é a <strong>chamada de função estruturada</strong> (<em>structured function calling</em>): cada ferramenta é descrita por um <strong>esquema JSON</strong> (<em>JSON Schema</em>) com nome, descrição e parâmetros (tipos e campos obrigatórios). As chaves do esquema fazem parte do formato e ficam em inglês:</p>
+
+    <div class="exemplo">{
+  "type": "function",
+  "function": {
+    "name": "multiply",
+    "description": "Multiplica dois números",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "a": {"type": "number", "description": "Primeiro número"},
+        "b": {"type": "number", "description": "Segundo número"}
+      },
+      "required": ["a", "b"]
+    }
+  }
+}</div>
+    <p class="legenda-exemplo">Esquema JSON da ferramenta multiply. APIs como a da OpenAI recebem esses esquemas em um parâmetro próprio (tools); na prática, eles costumam ser inseridos no prompt de sistema.</p>
+
+    <p>Boas práticas de definição de ferramentas: <strong>documente a ferramenta</strong> com descrições completas; <strong>minimize o número de ferramentas</strong> (menos de 10 é um bom começo); e <strong>minimize o escopo de cada ferramenta</strong>, pois funções com dezenas de parâmetros são difíceis de usar, principalmente para modelos menores.</p>
+
+    <h4>Seleção</h4>
+
+    <p>O LLM precisa escolher a ferramenta certa (se alguma for necessária) e usá-la corretamente. Aqui os <strong>LLMs de raciocínio</strong> se destacam, pois podem "pensar" sobre qual ferramenta usar. Perguntas simples ("Quanto é 1 + 1?") não exigem muito, mas planejar uma viagem com orçamento exige planejamento em vários passos. Quando há muitas ferramentas, encher a janela de contexto com todos os esquemas piora o desempenho, como vimos na engenharia de contexto. Uma solução é guardar os esquemas em um banco vetorial e <strong>usar RAG para descobrir as ferramentas mais relevantes</strong> para a pergunta.</p>
+
+    <h4>Chamada</h4>
+
+    <p>Ao terminar de raciocinar, o LLM produz uma <strong>string</strong> com a chamada formatada, por exemplo em JSON. Essa saída é apenas a intenção: um programa externo precisa extrair e interpretar o JSON e, então, executar a função. Nesse ponto, pode-se pedir <strong>aprovação humana</strong> antes de executar ferramentas perigosas (o humano no circuito da Seção 2.6). Bibliotecas como <strong>jsonschema</strong> e <strong>Pydantic</strong> ajudam a validar essas chamadas de forma mais robusta do que expressões regulares.</p>
+
+    <h4>Processamento da saída</h4>
+
+    <p>O resultado da ferramenta precisa voltar ao LLM. Isso é feito com a mesma estrutura de mensagens da memória de conversa: acrescenta-se uma mensagem do <strong>assistente</strong> com a chamada e uma mensagem com o <strong>resultado</strong>. Em LLMs treinados para chamar ferramentas nativamente, existe um papel próprio, <code>tool</code>; nos demais, usa-se o papel <code>user</code> com o prefixo <strong>OBSERVATION</strong>, como se o usuário tivesse observado o resultado e o contasse ao LLM. Com essas mensagens, o LLM pode combinar, resumir ou apresentar melhor a resposta final.</p>
+
+    <div class="exemplo">system: Você é um assistente prestativo. (+ definição das ferramentas)
+user: Quanto é 5,1 vezes 7,3?
+assistant: {"tool": "multiply", "kwargs": {"a": "5.1", "b": "7.3"}}
+user: OBSERVATION: 37.23
+assistant: A resposta é 37,23.</div>
+    <p class="legenda-exemplo">Histórico de mensagens de uma chamada de ferramenta: o LLM expressa a intenção, o sistema executa e devolve o resultado como observação.</p>
+
+    <p>Esses passos devem soar familiares. Os termos <strong>THOUGHT</strong> (o raciocínio do LLM sobre o que fazer), <strong>ACTION</strong> (a chamada de ferramenta em JSON), <strong>OBSERVATION</strong> (o resultado da ação) e <strong>ANSWER</strong> (a resposta final, após um ou mais passos) são as etapas do framework <strong>ReAct</strong> (<em>Reason and Act</em>), visto na Unidade 2, que dá autonomia ao agente.</p>
+
+    <h3 id="mcp">4.3 Model Context Protocol (MCP)</h3>
+
+    <p>Imagine que você criou prompts e integrações para várias ferramentas e surge um novo LLM com uma forma diferente de chamar ferramentas: seria preciso refazer todas as integrações. Esse é o <strong>problema N × M</strong>: com N LLMs e M ferramentas, seria preciso escrever uma integração para cada combinação.</p>
+
+    <p>O <strong>Model Context Protocol (MCP)</strong> resolve isso padronizando a forma de conectar ferramentas e APIs aos LLMs. É um padrão aberto, criado pela Anthropic e lançado em novembro de 2024, frequentemente chamado de "<strong>porta USB-C da IA</strong>". Com ele, o número de conexões a manter passa a ser <strong>N + M</strong>, e a manutenção da integração passa do usuário para o <strong>fornecedor da ferramenta</strong>: se a API do arXiv mudar, basta que os mantenedores atualizem o servidor MCP, e todos os usuários recebem a atualização.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig15_problema_nxm_mcp.png" alt="Integrações tradicionais N vezes M comparadas ao MCP N mais M" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 15: o MCP reduz o número de integrações personalizadas de N × M para N + M. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Sem o MCP, cada ferramenta precisaria ser rastreada e passada ao LLM manualmente, descrita manualmente (incluindo o esquema JSON) e atualizada manualmente sempre que a API mudasse. Já existem servidores MCP para Figma, GitHub, Home Assistant e muitos outros serviços.</p>
+
+    <h4>Componentes do MCP</h4>
+
+    <ul>
+      <li><strong>Host MCP:</strong> a aplicação com LLM que usa ferramentas externas (por exemplo, ChatGPT, Claude, Cursor ou GitHub Copilot). É o "cérebro" do fluxo e inicia a comunicação.</li>
+      <li><strong>Cliente MCP:</strong> fica dentro do host e mantém uma conexão um-para-um com cada servidor, cuidando da conexão, da descoberta das ferramentas e do encaminhamento das requisições.</li>
+      <li><strong>Servidor MCP:</strong> programa leve que expõe APIs e ferramentas pelo padrão MCP, geralmente ligado a uma fonte de dados ou serviço (por exemplo, todas as funções da API do arXiv). Os servidores oferecem três tipos de recurso: <strong>ferramentas</strong> (ações que o LLM pode invocar, como <code>/list_commits</code>), <strong>recursos</strong> (dados que o host carrega como contexto, como arquivos e documentos) e <strong>prompts</strong> (modelos reutilizáveis).</li>
+    </ul>
+
+    <figure class="figura-central">
+      <img src="U6_fig16_componentes_mcp.png" alt="Host MCP com clientes conectados a servidores MCP" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 16: os três componentes do MCP: host, cliente e servidor. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Repare, na Figura 16, que todos os clientes falam com os servidores pela mesma API unificada (o protocolo MCP). A integração personalizada com cada serviço (GitHub, arXiv, banco de dados) fica escondida dentro de cada servidor.</p>
+
+    <h4>O fluxo do MCP</h4>
+
+    <p>Vejamos o exemplo, em que o usuário pede ao assistente: "Resuma os 5 últimos commits". O fluxo segue doze passos:</p>
+
+    <ol>
+      <li>O prompt é enviado ao host MCP.</li>
+      <li>O host pergunta ao servidor MCP, por meio do cliente, quais ferramentas existem.</li>
+      <li>O servidor (ligado ao GitHub) devolve a lista de ferramentas, como <code>/list_commits</code> e <code>/create_pr</code>.</li>
+      <li>O prompt e as ferramentas disponíveis são enviados ao LLM.</li>
+      <li>O LLM decide usar <code>/list_commits</code>.</li>
+      <li>O cliente MCP comunica essa ação ao servidor.</li>
+      <li>O servidor executa o comando no GitHub.</li>
+      <li>O resultado volta ao servidor.</li>
+      <li>O servidor devolve o resultado ao cliente e ao host.</li>
+      <li>O LLM recebe os resultados e pode usar outra ferramenta ou seguir em frente.</li>
+      <li>O LLM resume os cinco commits.</li>
+      <li>O resumo é devolvido ao usuário.</li>
+    </ol>
+
+    <div class="figuras-lado-a-lado">
+      <figure style="max-width: 48%;">
+        <img src="U6_fig17_fluxo_mcp_parte1.png" alt="Fluxo do MCP, passos 1 a 4">
+        <figcaption class="legenda-exemplo">Figura 17: fluxo do MCP, passos 1 a 4: o host descobre quais ferramentas o servidor oferece e as envia ao LLM junto com o prompt. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+      </figure>
+      <figure style="max-width: 48%;">
+        <img src="U6_fig18_fluxo_mcp_parte2.png" alt="Fluxo do MCP, passos 5 a 9">
+        <figcaption class="legenda-exemplo">Figura 18: fluxo do MCP, passos 5 a 9: o LLM escolhe a ferramenta, que é executada pelo servidor MCP, e o resultado volta ao host. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+      </figure>
+    </div>
+
+    <p>O LLM continua precisando saber chamar ferramentas; a vantagem é que ele <strong>descobre</strong> as ferramentas existentes, escolhe qual usar e não precisa se preocupar com funcionalidades de API desatualizadas. As mensagens trocadas seguem a especificação <strong>JSON-RPC 2.0</strong>.</p>
+
+    <h3 id="skills">4.4 Skills</h3>
+
+    <p>Ferramentas e MCP dão ao agente ações que ele pode executar, mas não dizem <strong>quando</strong> usá-las nem como elas se encaixam em um fluxo de trabalho maior. O agente não conhece o fluxo da sua equipe, as ferramentas preferidas ou os padrões de código; ter de repetir, a cada sessão, que ele deve usar <code>uv</code> em vez de <code>pip</code> é incômodo.</p>
+
+    <p>As <strong>Skills</strong>, criadas pela Anthropic, são um conjunto de <strong>instruções, scripts e recursos</strong> que o agente usa como contexto para realizar uma tarefa. Elas contêm <strong>conhecimento procedural</strong>: instruções passo a passo de como abordar uma tarefa no seu contexto. Por exemplo, para criar uma apresentação, o agente pode buscar informação na web (ferramenta), resumir (ele mesmo faz) e criar os slides um a um (ferramenta); a Skill é a "receita" que diz <strong>o que fazer, quando e como</strong>.</p>
+
+    <p>Uma Skill funciona por <strong>divulgação progressiva</strong> (<em>progressive disclosure</em>): o agente começa com o mínimo de informação e recebe mais detalhes só quando a Skill é usada, em três camadas:</p>
+
+    <div class="exemplo">Camada 1 → metadados do SKILL.md (YAML: nome e descrição) → sempre carregada → cerca de 100 tokens
+Camada 2 → instruções do SKILL.md (Markdown) → carregada quando a Skill é ativada → menos de 5.000 tokens
+Camada 3 → arquivos anexos (Markdown, scripts, dados etc.) → carregados quando necessário → conforme a necessidade</div>
+    <p class="legenda-exemplo">As três camadas da divulgação progressiva e seu impacto no número de tokens (Tabela 5-1 do livro).</p>
+
+    <p>Usaremos como exemplo uma Skill que transforma transcrições e anotações de reuniões em atas estruturadas com itens de ação. Toda Skill precisa de um arquivo <strong>SKILL.md</strong>. O início do arquivo traz os metadados em YAML: o nome (<code>meeting_notes</code>) e a descrição ("Use esta Skill para transformar transcrições ou anotações de reuniões em decisões e itens de ação estruturados"). Os metadados de todas as Skills ficam sempre visíveis ao agente, geralmente no prompt de sistema, para que ele decida se vale a pena explorá-las.</p>
+
+    <p>O corpo do SKILL.md traz as instruções, entregues só quando o agente as pede, como se fosse uma ferramenta que fornece contexto. Essa é uma aplicação direta da engenharia de contexto. Quando a Skill cresce (atas de reunião individual com o gestor, com colegas, com a equipe, com parceiros externos), é possível <strong>anexar arquivos</strong> na pasta da Skill (outros arquivos Markdown e scripts Python) e referenciá-los no SKILL.md, para que o agente os carregue apenas quando necessário.</p>
+
+    <div class="exemplo">meeting_notes/
+├── SKILL.md
+├── scripts/
+│   └── extract_action_items.py
+└── formats/
+    ├── one_on_one_manager.md
+    ├── one_on_one_colleague.md
+    ├── one_on_one_report.md
+    ├── team_meeting.md
+    └── external_call.md</div>
+    <p class="legenda-exemplo">Estrutura de pastas da Skill de atas de reunião: só o SKILL.md é obrigatório; os demais arquivos são carregados sob demanda.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig19_skill_camadas.png" alt="Anatomia de uma Skill com metadados, instruções e arquivos anexos" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 19: anatomia de uma Skill: os metadados (camada 1), as instruções do SKILL.md (camada 2) e os arquivos anexos carregados quando necessário (camada 3). Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Em resumo: enquanto a definição de uma ferramenta diz ao agente <strong>o que</strong> ela faz, uma Skill diz <strong>como</strong> realizar um trabalho (os passos, as convenções e as referências de uma tarefa recorrente), mantendo a janela de contexto enxuta.</p>
+  </section>
+
+  <section id="multiagentes">
+    <h2>5. Sistemas multiagentes</h2>
+
+    <h3 id="o-que-e-mas">5.1 O que é um sistema multiagente</h3>
+
+    <p>Até aqui, vimos o agente isolado: uma entidade que planeja, executa e reflete sozinha. Um <strong>sistema multiagente</strong> (<em>multi-agent system</em>, <strong>MAS</strong>) contém vários agentes que <strong>colaboram, se coordenam ou até competem</strong> para atingir um objetivo. Cada agente tem algum grau de autonomia, mas pode ter ferramentas, subobjetivos ou até personalidades diferentes. Por exemplo, em um sistema de pesquisa, em vez de um único agente fazer tudo (buscar na web, processar artigos e figuras, ler e criticar os artigos, resumir), teríamos um agente de busca, um de processamento, um de leitura de artigos, um de sumarização, e assim por diante.</p>
+
+    <figure class="figura-central">
+      <img src="U6_fig20_agente_unico_multiagente.png" alt="Comparação entre agente único e sistema multiagente" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 20: diferença entre um sistema com um único agente e um sistema multiagente. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <p>Os agentes podem ou não compartilhar o mesmo ambiente. Por exemplo, um sistema de reservas com um agente que procura lugares para visitar, outro que pesquisa voos baratos e outro que organiza a agenda das férias. Os ambientes podem ser <strong>físicos</strong> (robôs), <strong>virtuais</strong> (ambientes de jogo) ou <strong>textuais</strong> (IDEs de programação, interfaces de chat).</p>
+
+    <p>Quanto aos papéis, os agentes podem ser <strong>homogêneos</strong> (capacidades parecidas, para executar tarefas em paralelo), <strong>heterogêneos</strong> (papéis e objetivos diferentes, possivelmente com LLMs, memórias e ferramentas diferentes) ou ter <strong>especialização emergente</strong> (agentes idênticos que, interagindo, evoluem para papéis especializados, como coletar recursos ou defender, em simulações de jogos).</p>
+
+    <div class="exemplo">Vantagens
+  Colaboração → problemas complexos e diversos ficam mais fáceis com mais agentes trabalhando juntos.
+  Escalabilidade → é possível aumentar o número de agentes sem deixar o sistema mais lento, rodando-os em paralelo ou de forma assíncrona.
+  Velocidade → vários agentes resolvem tarefas em paralelo, e agentes especializados tendem a ser mais rápidos que um agente genérico.
+
+Desvantagens
+  Complexidade → é preciso gerenciar com cuidado a orquestração e as interações entre agentes.
+  Custo → mais agentes com LLMs poderosos significam mais computação.
+  Avaliação → avaliar um agente já é difícil; avaliar vários trabalhando juntos é ainda mais.</div>
+    <p class="legenda-exemplo">Vantagens e desvantagens dos sistemas multiagentes.</p>
+
+    <p>Sistemas multiagentes já são usados na prática. A <strong>Anthropic</strong> usou vários agentes Claude para construir um sistema de pesquisa; a <strong>Uber</strong> criou um MAS de recuperação de dados com um agente supervisor e vários agentes de recuperação (como um agente SQL); e a <strong>Delivery Hero</strong> usa agentes para extrair entidades e criar títulos de produtos, construindo uma base de conhecimento de produtos.</p>
+
+    <h3 id="padroes-orquestracao">5.2 Padrões de orquestração</h3>
+
+    <p>Colocar vários agentes em um sistema exige decidir como eles serão organizados, com quais especialidades e como vão se comunicar. Os <strong>padrões</strong> descrevem a topologia do sistema, ou seja, como os agentes se relacionam e se comunicam. São quatro tipos:</p>
+
+    <ul>
+      <li><strong>Centralizado:</strong> um único agente orquestrador controla a comunicação e distribui responsabilidades e tarefas. É o mais usado, por ser fácil de implementar e gerenciar; a desvantagem é que o sistema todo pode cair se o orquestrador falhar.</li>
+      <li><strong>Descentralizado:</strong> os agentes têm responsabilidades parecidas e a comunicação é distribuída, sem um "líder". É o mais estável (se alguns agentes falham, os outros continuam), e escalar é só acrescentar agentes; mas exige muitos agentes capazes e muita comunicação, o que consome recursos.</li>
+      <li><strong>Hierárquico:</strong> os agentes ficam em camadas, cada nível com um grau de autoridade e papéis distintos. É intuitivo, pois lembra as organizações tradicionais, e permite alocar recursos de forma eficiente; ainda assim, é complexo e é o que exige mais comunicação.</li>
+      <li><strong>Federado:</strong> os agentes ficam em ambientes paralelos (organizações diferentes) e se comunicam apenas indiretamente, para proteger a privacidade dos dados; cada grupo segue regras diferentes, mas pode compartilhar resultados. É um padrão recente, que favorece a colaboração entre sistemas, mas depende de padrões compartilhados que nem sempre existem.</li>
+    </ul>
+
+    <figure class="figura-central">
+      <img src="U6_fig21_padroes_orquestracao.png" alt="Padrões centralizado, descentralizado, hierárquico e federado" style="width: 600px; max-width: 100%; height: auto;">
+      <figcaption class="legenda-exemplo">Figura 21: os quatro padrões de orquestração de agentes. Adaptado de Grootendorst e Alammar (2026).</figcaption>
+    </figure>
+
+    <h3 id="subagentes-ferramentas">5.3 Subagentes como ferramentas</h3>
+
+    <p>Um "truque" simples para criar um sistema centralizado (e potencialmente hierárquico) é tratar os <strong>subagentes como ferramentas</strong>. Primeiro, cria-se um <strong>agente de matemática</strong>, com as ferramentas somar, subtrair e multiplicar, e um <strong>agente de datas</strong>, com as ferramentas "data de hoje" e "dias entre duas datas". Depois, cada subagente é "embrulhado" em uma função (<code>ask_math_agent</code> e <code>ask_date_agent</code>), e essas funções são entregues como ferramentas a um <strong>agente orquestrador</strong>, que decide quando pedir ajuda a cada um. Veja a trajetória do exemplo:</p>
+
+    <div class="exemplo">Pergunta ao orquestrador: "Se eu economizar €4 por dia até 2030, quanto terei?"
+
+Passo 1 → ferramenta ask_date_agent("Quantos dias de hoje até o fim de 2030?")
+  Observação: "São 1.691 dias de hoje (15 de maio de 2026) até o fim de 2030 (31 de dezembro de 2030)."
+Passo 2 → ferramenta ask_math_agent("€4 vezes 1691")
+  Observação: "€6.764"
+Passo 3 → resposta: "Se você economizar €4 por dia até o fim de 2030, terá €6.764."
+
+Trajetória interna do agente de datas:
+Passo 1 → ferramenta today() → 2026-05-15
+Passo 2 → ferramenta days_between("2026-05-15", "2030-12-31") → 1691
+Passo 3 → resposta: "São 1.691 dias…"</div>
+    <p class="legenda-exemplo">O orquestrador delega a contagem de dias ao agente de datas e o cálculo ao agente de matemática. A resposta muda conforme a data em que o exemplo é executado (este foi gerado em maio de 2026).</p>
+
+    <p>Esse exemplo traz duas lições. A primeira é que a ideia é útil quando há <strong>dezenas ou centenas de ferramentas</strong>: o orquestrador erraria ao escolher entre tantas opções e pode, em vez disso, dedicar subconjuntos delas a subagentes. A segunda é que olhar só a trajetória do orquestrador dá uma visão abstrata do que aconteceu; por isso, é preciso inspecionar também as trajetórias dos subagentes para saber se eles seguiram um caminho eficiente.</p>
+
+    <h3 id="frameworks">5.4 Frameworks para sistemas multiagentes</h3>
+
+    <p>Não existe um único framework ou padrão ideal para todos os casos; cada framework tem a sua "filosofia".</p>
+
+    <ul>
+      <li><strong>CAMEL:</strong> um dos primeiros frameworks colaborativos, baseado em <strong>interpretação de papéis</strong> (<em>role-playing</em>). O usuário propõe uma ideia (por exemplo, "criar um site para o meu blog de IA") e são criados dois agentes: o <strong>usuário de IA</strong>, que representa o usuário e dá instruções (aqui no papel de "blogueiro"), e o <strong>assistente de IA</strong>, que executa (no papel de "programador"). Um <strong>agente especificador de tarefas</strong> reescreve o pedido de forma mais detalhada (por exemplo, "crie um site pronto para produção, usando frameworks modernos como Next.js e Tailwind CSS…"). Em seguida, os dois agentes conversam em vários turnos até o usuário de IA encerrar e devolver a resposta.</li>
+      <li><strong>MetaGPT:</strong> leva a interpretação de papéis mais longe e imita <strong>estruturas organizacionais inteiras</strong>, como uma empresa de software. Tem três componentes: <strong>especialização de papéis</strong> (cada papel tem nome, objetivo, habilidades e restrições, como gerente de produto, arquiteto e engenheiro, e todos seguem um procedimento operacional padrão, trabalhando em sequência, cada um com ReAct); <strong>protocolo de comunicação</strong> (os agentes se comunicam por artefatos estruturados, como documentos e diagramas, e não só por diálogo); e <strong>programação iterativa com feedback executável</strong> (cada agente revisa a própria saída; o engenheiro, por exemplo, também executa e depura o código).</li>
+      <li><strong>Frameworks de produção:</strong> criados do ponto de vista do desenvolvedor, como produtos para construir e escalar sistemas multiagentes. No fim de 2025, os mais comuns eram o <strong>AutoGen</strong> (Microsoft), o <strong>LangGraph</strong> e o <strong>CrewAI</strong>, todos modulares, permitindo escolher papéis, memória, ferramentas e o padrão do sistema. O LangGraph será usado na parte prática da Unidade 7. Também existe o <strong>n8n</strong>, ferramenta de código aberto de automação de fluxos com IA, em que os fluxos são predefinidos, mas os agentes ainda podem ter alguma autonomia ("no limite" de um sistema multiagente).</li>
+    </ul>
+
+
+  </section>
+
+  <section id="referencias">
+    <h2>6. Referências</h2>
+    <ul>
+      <li>
+        GROOTENDORST, M.; ALAMMAR, J. <strong>An Illustrated Guide to AI Agents</strong>. Sebastopol: O'Reilly Media, 2026. ISBN 979-8341662698. Disponível em: <a href="https://www.oreilly.com/library/view/an-illustrated-guide/9798341662681/" target="_blank" rel="noopener">https://www.oreilly.com/library/view/an-illustrated-guide/9798341662681/</a>. Código-fonte: <a href="https://github.com/HandsOnLLM/An-Illustrated-Guide-To-AI-Agents" target="_blank" rel="noopener">https://github.com/HandsOnLLM/An-Illustrated-Guide-To-AI-Agents</a>. Acesso em: 10 out. 2026. (Fonte principal: Capítulo 1, Introduction; Capítulo 4, Memory; Capítulo 5, Tool Usage, Learning, and Protocols; Capítulo 8, Multi-Agent Systems.)
+      </li>
+      <li>
+        LIU, N. F.; LIN, K.; HEWITT, J.; PARANJAPE, A.; BEVILACQUA, M.; PETRONI, F.; LIANG, P. <strong>Lost in the Middle: How Language Models Use Long Contexts</strong>. Transactions of the Association for Computational Linguistics, v. 12, p. 157–173, 2024. (Origem do fenômeno e dos dados da Figura 13.)
+      </li>
+      <li>
+        RUSSELL, S.; NORVIG, P. <strong>Artificial Intelligence: A Modern Approach</strong>. 4. ed. Hoboken: Pearson, 2020. (Origem da definição de agente citada na Seção 2.1.)
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p style="margin-bottom: 5px; font-size: 12px;">
+    Material didático produzido para a disciplina Aplicações de Modelos de Linguagem Natural — Unidade 6.
+  </p>
+  <p style="margin-bottom: 5px; font-size: 12px;">
+    Todo o conteúdo deste material foi elaborado com base nos artigos listados nas referências, previamente selecionados
+    e revisados pela professora responsável pela disciplina.
+  </p>
+  <p style="margin-bottom: 5px; font-size: 12px;">
+    A inteligência artificial foi utilizada exclusivamente para a
+    tradução e a adaptação do conteúdo ao formato de material didático.
+  </p>
+</footer>
+
+<script>
+  (function () {
+    var botao = document.getElementById('botao-menu');
+    var menu = document.getElementById('menu-secoes');
+    var overlay = document.getElementById('overlay');
+
+    function abrirMenu() {
+      menu.classList.add('aberto');
+      overlay.classList.add('aberto');
+      botao.classList.add('aberto');
+      botao.setAttribute('aria-expanded', 'true');
+    }
+
+    function fecharMenu() {
+      menu.classList.remove('aberto');
+      overlay.classList.remove('aberto');
+      botao.classList.remove('aberto');
+      botao.setAttribute('aria-expanded', 'false');
+    }
+
+    botao.addEventListener('click', function () {
+      if (menu.classList.contains('aberto')) {
+        fecharMenu();
+      } else {
+        abrirMenu();
+      }
+    });
+
+    overlay.addEventListener('click', fecharMenu);
+
+    var linksMenu = menu.querySelectorAll('a');
+    for (var i = 0; i < linksMenu.length; i++) {
+      linksMenu[i].addEventListener('click', fecharMenu);
+    }
+
+    document.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape') {
+        fecharMenu();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
